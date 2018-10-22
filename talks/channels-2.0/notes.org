@@ -1,0 +1,100 @@
+* it's been 3 years since original channels design
+* Tom Christie work on asyncio standard interface
+* issues of the current channels design
+** strictly pushing *everything* over network
+   scaling issues
+** there is no standard interface like WSGI
+   you should listed on channels by hand
+** persisting data over life time of a socket is done using django sessions backend
+   scaling issues
+** passing channels names directly every where
+   hard to write multiplexing consumers same way like we do with
+   simplexed (no channel to send message to in the multiplexed
+   consumer)
+** deployment is too tricky
+   we need deploy load balancer, channels layer, session store, setup
+   the right number of workers and protocol servers (back pressure
+   issues, workers throughput)
+* design goal of all this decisions
+  - *you need to be able to send to channel from everywhere*
+  - react on web sockets termination on another machine
+  - cross-socket and cross-process communications
+* multiplexer logic needs to be implemented in all places
+  send-encoding issue
+* moving the line
+  1. Run workers in the same process as protocol servers
+  2. All per connections variables stored in memory of protocol
+     servers
+  3. Remove direct "send-to-layer" encoding conventions.  Use abstract
+     dictionaries.
+* reasons
+  1. Removes a lot of handshaking request response traffic between
+     workers and protocol servers.
+* abstractions
+  1. Add protocol handler abstraction
+  2. Turn consumers into callable handlers
+     #+BEGIN_SRC python
+       class ChatHandler:
+
+           def connect(message):
+               return {"accept": True}
+
+           def receive(message):
+               return {"text": "You said: %s" % message['text']}
+     #+END_SRC
+  3. We can't have both sync and async api in django, that's too much
+     work
+* solution
+  We need an interface that lets us send and receive messages outside
+  the scope of a synchronous request-response cycle, yet that still
+  allows us to use synchronous code.
+* using threadpools like a channel layer
+* issues with this approach
+  that one server with very busy sockets will have much worth
+  performance that server with quiet ones.
+* solution
+  we will randomly close websockets and client code should be ready
+  for this
+* not high throughput no individual processes
+  combined with django framework
+* tender love
+  when I feel that my function calls are too fast, I wrap that into
+  micro service to add random latency.
+* the point of websockets is low latency compared to http
+* we need to move targets from sockets themselves to the protocols
+  handling them.
+* How do we send to a specific socket-handling code instance?
+  *reply channel* is good for that
+* groups are terrible idea
+  - too complex logic to remove channel from group
+  - people use them not for intended purposes
+* How do we broadcast to a whole set of them at once?
+* Deadlock avoid design
+  It's impossible to write code that wait for some event. It force you
+  to write code, which can handle events in any specific order.
+* Bring it all together
+** layer interface like send, receive and group add remains the same
+   SOA services over it
+** split layers into sync and async interface
+** Consumer interface
+   #+BEGIN_SRC python
+     class Consumer:
+
+         def __init__(self, type, channel_layer, consumer_channel, send):
+             pass
+
+         def __call__(self, message):
+             pass
+   #+END_SRC
+** groups will be hidden in the consumer class
+   We are not gonna expose it the client, so it's easy to use them for
+   broadcasting and hard for every thing else.
+* links
+  - http://www.aeracode.org/2017/07/11/towards-channels-20/
+  - http://www.aeracode.org/2017/10/18/channels-2-october/
+* modern twisted slide
+  show async/await syntax usage with twisted
+* asyncio and twisted
+  - describe how twisted set it's own loop to the asyncio.set_event_loop
+* show difference between redis and sentinel layer
+* routing is now set of asgi applications

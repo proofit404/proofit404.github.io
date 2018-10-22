@@ -1,0 +1,408 @@
+* Research questions
+
+** How celery submits tasks into RabbitMQ broker?
+
+*** It has payload property which contain whole dumped message
+
+    #+BEGIN_SRC yaml
+      args: [1, 2]
+      callbacks: null
+      chord: null
+      errbacks: null
+      eta: null
+      expires: null
+      id: 4bb5922d-3c7e-48ec-abca-7ad880ba9723
+      kwargs: {}
+      retries: 0
+      task: app.add
+      taskset: null
+      timelimit: [null, null]
+      utc: true
+    #+END_SRC
+
+    #+BEGIN_SRC json
+      {
+          "chord": null,
+          "args": [
+              1,
+              2
+          ],
+          "id": "27ebcaee-444f-4379-a438-04c3b5bb0fc3",
+          "eta": null,
+          "utc": true,
+          "errbacks": null,
+          "timelimit": [
+              null,
+              null
+          ],
+          "kwargs": {
+          },
+          "taskset": null,
+          "callbacks": null,
+          "expires": null,
+          "retries": 0,
+          "task": "app.add"
+      }
+    #+END_SRC
+
+*** For pickle and msgpack it encoded into base64 strings
+
+    #+BEGIN_SRC python :session Python :results pp
+      import base64
+      base64.decodebytes(b'gAJ9cQAoWAMAAAB1dGNxAYhYBwAAAHRhc2tzZXRxAk5YAgAAAGlkcQNYJAAAADFiODE2ODRmLWM4MzctNDZhYS04YzVlLTI2OTRlZTQzMzI3M3EEWAkAAAB0aW1lbGltaXRxBU5OhnEGWAMAAABldGFxB05YCAAAAGVycmJhY2tzcQhOWAkAAABjYWxsYmFja3NxCU5YBwAAAGV4cGlyZXNxCk5YBQAAAGNob3JkcQtOWAcAAAByZXRyaWVzcQxLAFgGAAAAa3dhcmdzcQ19cQ5YBAAAAHRhc2txD1gHAAAAYXBwLmFkZHEQWAQAAABhcmdzcRFLAUsChnESdS4=')
+    #+END_SRC
+
+    #+RESULTS:
+    : (b'\x80\x02}q\x00(X\x03\x00\x00\x00utcq\x01\x88X\x07\x00\x00\x00tasksetq\x02N'
+    :  b'X\x02\x00\x00\x00idq\x03X$\x00\x00\x001b81684f-c837-46aa-8c5e-2694ee4332'
+    :  b'73q\x04X\t\x00\x00\x00timelimitq\x05NN\x86q\x06X\x03\x00\x00\x00etaq\x07N'
+    :  b'X\x08\x00\x00\x00errbacksq\x08NX\t\x00\x00\x00callbacksq\tNX\x07\x00'
+    :  b'\x00\x00expiresq\nNX\x05\x00\x00\x00chordq\x0bNX\x07\x00\x00\x00retrie'
+    :  b'sq\x0cK\x00X\x06\x00\x00\x00kwargsq\r}q\x0eX\x04\x00\x00\x00taskq\x0f'
+    :  b'X\x07\x00\x00\x00app.addq\x10X\x04\x00\x00\x00argsq\x11K\x01K\x02\x86q\x12'
+    :  b'u.')
+
+    #+BEGIN_SRC python :session Python :results pp
+      import pickle
+      pickle.loads(b'\x80\x02}q\x00(X\x03\x00\x00\x00utcq\x01\x88X\x07\x00\x00\x00tasksetq\x02NX\x02\x00\x00\x00idq\x03X$\x00\x00\x001b81684f-c837-46aa-8c5e-2694ee433273q\x04X\t\x00\x00\x00timelimitq\x05NN\x86q\x06X\x03\x00\x00\x00etaq\x07NX\x08\x00\x00\x00errbacksq\x08NX\t\x00\x00\x00callbacksq\tNX\x07\x00\x00\x00expiresq\nNX\x05\x00\x00\x00chordq\x0bNX\x07\x00\x00\x00retriesq\x0cK\x00X\x06\x00\x00\x00kwargsq\r}q\x0eX\x04\x00\x00\x00taskq\x0fX\x07\x00\x00\x00app.addq\x10X\x04\x00\x00\x00argsq\x11K\x01K\x02\x86q\x12u.')
+    #+END_SRC
+
+    #+RESULTS:
+    #+begin_example
+    {'args': (1, 2),
+     'callbacks': None,
+     'chord': None,
+     'errbacks': None,
+     'eta': None,
+     'expires': None,
+     'id': '1b81684f-c837-46aa-8c5e-2694ee433273',
+     'kwargs': {},
+     'retries': 0,
+     'task': 'app.add',
+     'taskset': None,
+     'timelimit': (None, None),
+     'utc': True}
+    #+end_example
+
+    #+BEGIN_SRC python :session Python :results pp
+      import base64
+      base64.decodebytes(b'jaVjaG9yZMCkdGFza6dhcHAuYWRko2V0YcCiaWTZJGVmNGIxMDc4LTJmMzYtNGRlYS1iMDM0LWRiZWMyOWNmZmE3ZqRhcmdzkgECqGVycmJhY2tzwKZrd2FyZ3OAp3JldHJpZXMAp3Rhc2tzZXTAqWNhbGxiYWNrc8CpdGltZWxpbWl0ksDAo3V0Y8OnZXhwaXJlc8A=')
+    #+END_SRC
+
+    #+RESULTS:
+    : (b'\x8d\xa5chord\xc0\xa4task\xa7app.add\xa3eta\xc0\xa2id\xd9$ef4b1078-2f36-4de'
+    :  b'a-b034-dbec29cffa7f\xa4args\x92\x01\x02\xa8errbacks\xc0\xa6kwargs\x80\xa7re'
+    :  b'tries\x00\xa7taskset\xc0\xa9callbacks\xc0\xa9timelimit\x92\xc0\xc0\xa3'
+    :  b'utc\xc3\xa7expires\xc0')
+
+    #+BEGIN_SRC python :session Python :results pp
+      import msgpack
+      msgpack.loads(b'\x8d\xa5chord\xc0\xa4task\xa7app.add\xa3eta\xc0\xa2id\xd9$ef4b1078-2f36-4dea-b034-dbec29cffa7f\xa4args\x92\x01\x02\xa8errbacks\xc0\xa6kwargs\x80\xa7retries\x00\xa7taskset\xc0\xa9callbacks\xc0\xa9timelimit\x92\xc0\xc0\xa3utc\xc3\xa7expires\xc0')
+    #+END_SRC
+
+    #+RESULTS:
+    #+begin_example
+    {b'args': [1, 2],
+     b'callbacks': None,
+     b'chord': None,
+     b'errbacks': None,
+     b'eta': None,
+     b'expires': None,
+     b'id': b'ef4b1078-2f36-4dea-b034-dbec29cffa7f',
+     b'kwargs': {},
+     b'retries': 0,
+     b'task': b'app.add',
+     b'taskset': None,
+     b'timelimit': [None, None],
+     b'utc': True}
+    #+end_example
+
+*** AMQP properties
+    Celery setup some AMQP content frame properties like reply_to,
+    correlation_id, priority, content_encoding and content_type.
+
+*** AMQP channel
+    Multiplexing primitive to use multiple synchronous and
+    asynchronous methods on single connection.  Each RabbitMQ
+    connection is a bidirectional stream.  Frame is simplest bytes
+    sequence passed atomically.  Each frame has channel number.
+
+*** AMQP flow control
+    Simple command to stop very active publisher.  Publisher must stop
+    publish messages to exchanges until RabbitMQ says continue.
+    Consumers must use more elegant technique with QoS limits.
+
+** How celery submits tasks into Redis broker?
+
+*** Name of queue equals name of list in the redis
+
+*** Whole message serialized and pushed in it
+
+*** It has properties field with members correlated with AMQP message properties
+
+*** It also has body field containing base64 encoded JSON byte string corresponding to AMQP message payload
+
+    #+BEGIN_SRC python :session Python :results pp
+      import base64, json
+      x = 'eyJ1dGMiOiB0cnVlLCAiY2FsbGJhY2tzIjogbnVsbCwgInRhc2tzZXQiOiBudWxsLCAidGltZWxpbWl0IjogW251bGwsIG51bGxdLCAiY2hvcmQiOiBudWxsLCAiYXJncyI6IFsxLCAyXSwgImV4cGlyZXMiOiBudWxsLCAidGFzayI6ICJhcHAuYWRkIiwgImt3YXJncyI6IHt9LCAiZXJyYmFja3MiOiBudWxsLCAiaWQiOiAiN2M3MTlkN2YtOGU3NC00N2YzLTk0ODktODU5MTc3MzZiYzgyIiwgInJldHJpZXMiOiAwLCAiZXRhIjogbnVsbH0='
+      y = base64.decodebytes(x.encode()).decode()
+      json.loads(y)
+    #+END_SRC
+
+    #+RESULTS:
+    #+begin_example
+    {'args': [1, 2],
+     'callbacks': None,
+     'chord': None,
+     'errbacks': None,
+     'eta': None,
+     'expires': None,
+     'id': '7c719d7f-8e74-47f3-9489-85917736bc82',
+     'kwargs': {},
+     'retries': 0,
+     'task': 'app.add',
+     'taskset': None,
+     'timelimit': [None, None],
+     'utc': True}
+    #+end_example
+
+*** If all serialization settings changed to pickle it still contains JSON document with body field in base64 string
+
+    #+BEGIN_SRC python :session Python :results pp
+      import base64, pickle
+      x = 'gAJ9cQAoWAIAAABpZHEBWCQAAAAyNWY2ZWI0Ny1hZjgyLTQ0ZmYtYmY3Yy1kM2YzMjc0NDJjODdxAlgDAAAAdXRjcQOIWAcAAABleHBpcmVzcQROWAMAAABldGFxBU5YBQAAAGNob3JkcQZOWAQAAAB0YXNrcQdYBwAAAGFwcC5hZGRxCFgHAAAAdGFza3NldHEJTlgGAAAAa3dhcmdzcQp9cQtYBAAAAGFyZ3NxDEsBSwKGcQ1YCAAAAGVycmJhY2tzcQ5OWAkAAAB0aW1lbGltaXRxD05OhnEQWAcAAAByZXRyaWVzcRFLAFgJAAAAY2FsbGJhY2tzcRJOdS4='
+      y = base64.decodebytes(x.encode())
+      pickle.loads(y)
+    #+END_SRC
+
+    #+RESULTS:
+    #+begin_example
+    {'args': (1, 2),
+     'callbacks': None,
+     'chord': None,
+     'errbacks': None,
+     'eta': None,
+     'expires': None,
+     'id': '25f6eb47-af82-44ff-bf7c-d3f327442c87',
+     'kwargs': {},
+     'retries': 0,
+     'task': 'app.add',
+     'taskset': None,
+     'timelimit': (None, None),
+     'utc': True}
+    #+end_example
+
+*** As we can see it same payload stored as pickle string
+
+    #+BEGIN_SRC python :session Python :results pp
+      import pickle
+      pickle.loads(b'\x80\x02}q\x00(X\x02\x00\x00\x00idq\x01X$\x00\x00\x0025f6eb47-af82-44ff-bf7c-d3f327442c87q\x02X\x03\x00\x00\x00utcq\x03\x88X\x07\x00\x00\x00expiresq\x04NX\x03\x00\x00\x00etaq\x05NX\x05\x00\x00\x00chordq\x06NX\x04\x00\x00\x00taskq\x07X\x07\x00\x00\x00app.addq\x08X\x07\x00\x00\x00tasksetq\tNX\x06\x00\x00\x00kwargsq\n}q\x0bX\x04\x00\x00\x00argsq\x0cK\x01K\x02\x86q\rX\x08\x00\x00\x00errbacksq\x0eNX\t\x00\x00\x00timelimitq\x0fNN\x86q\x10X\x07\x00\x00\x00retriesq\x11K\x00X\t\x00\x00\x00callbacksq\x12Nu.')
+    #+END_SRC
+
+    #+RESULTS:
+    #+begin_example
+    {'args': (1, 2),
+     'callbacks': None,
+     'chord': None,
+     'errbacks': None,
+     'eta': None,
+     'expires': None,
+     'id': '25f6eb47-af82-44ff-bf7c-d3f327442c87',
+     'kwargs': {},
+     'retries': 0,
+     'task': 'app.add',
+     'taskset': None,
+     'timelimit': (None, None),
+     'utc': True}
+    #+end_example
+
+*** It isn't possible to change kombu JSON serializer
+    kombu.utils.json dumps and loads are hardcoded into Channel._get
+    and QoS.append methods discussed below.
+
+*** Acknowledgment implementation
+    Celery store whole message in the queue list.  Then it take task id from
+    message body and store it in the "unacked" redis hash against task
+    id.  Also it store task ids in the sorted set "unacked_index" with
+    timestamp as score points.
+
+**** It is possible to take task from queue and don't save it in the unacked hash
+     Channel.basic_get calls self.qos.append after self._get if no_ack
+     is None.  _get uses rpop on its own.  Then self.qos.append calls
+     pipeline with zadd with new message dump.
+
+**** Here is redis state
+
+     #+BEGIN_SRC fundamental
+       >>> KEYS *
+       1) "celery"
+       2) "unacked"
+       3) "_kombu.binding.celery.pidbox"
+       4) "_kombu.binding.celery"
+       5) "_kombu.binding.celeryev"
+       6) "unacked_index"
+       7) "unacked_mutex"
+       >>> LRANGE celery 0 -1
+       1) "{\"properties\": {\"delivery_tag\": \"13ce9ff2-c596-4471-84b6-94d3ef332041\", \"delivery_mode\": 2, \"correlation_id\": \"79bfa93e-c66b-4f45-b282-3b3835abcbad\", \"body_encoding\": \"base64\", \"delivery_info\": {\"priority\": 0, \"exchange\": \"celery\", \"routing_key\": \"celery\"}, \"reply_to\": \"ee172d34-d646-3478-9126-7df1d127e6fc\"}, \"body\": \"eyJ0aW1lbGltaXQiOiBbbnVsbCwgbnVsbF0sICJ0YXNrc2V0IjogbnVsbCwgInRhc2siOiAiYXBwLmFkZCIsICJleHBpcmVzIjogbnVsbCwgInJldHJpZXMiOiAwLCAidXRjIjogdHJ1ZSwgImNhbGxiYWNrcyI6IG51bGwsICJpZCI6ICI3OWJmYTkzZS1jNjZiLTRmNDUtYjI4Mi0zYjM4MzVhYmNiYWQiLCAiY2hvcmQiOiBudWxsLCAia3dhcmdzIjoge30sICJldGEiOiBudWxsLCAiYXJncyI6IFsxLCAyXSwgImVycmJhY2tzIjogbnVsbH0=\", \"headers\": {}, \"content-encoding\": \"utf-8\", \"content-type\": \"application/json\"}"
+       >>> HGETALL unacked
+       1) "13ce9ff2-c596-4471-84b6-94d3ef332041"
+       2) "[{\"body\": \"eyJ0aW1lbGltaXQiOiBbbnVsbCwgbnVsbF0sICJ0YXNrc2V0IjogbnVsbCwgInRhc2siOiAiYXBwLmFkZCIsICJleHBpcmVzIjogbnVsbCwgInJldHJpZXMiOiAwLCAidXRjIjogdHJ1ZSwgImNhbGxiYWNrcyI6IG51bGwsICJpZCI6ICI3OWJmYTkzZS1jNjZiLTRmNDUtYjI4Mi0zYjM4MzVhYmNiYWQiLCAiY2hvcmQiOiBudWxsLCAia3dhcmdzIjoge30sICJldGEiOiBudWxsLCAiYXJncyI6IFsxLCAyXSwgImVycmJhY2tzIjogbnVsbH0=\", \"content-type\": \"application/json\", \"properties\": {\"body_encoding\": \"base64\", \"delivery_info\": {\"routing_key\": \"celery\", \"exchange\": \"celery\", \"priority\": 0}, \"reply_to\": \"ee172d34-d646-3478-9126-7df1d127e6fc\", \"delivery_mode\": 2, \"correlation_id\": \"79bfa93e-c66b-4f45-b282-3b3835abcbad\", \"delivery_tag\": \"13ce9ff2-c596-4471-84b6-94d3ef332041\"}, \"content-encoding\": \"utf-8\", \"headers\": {}}, \"celery\", \"celery\"]"
+     #+END_SRC
+
+**** Here is task message
+
+     #+BEGIN_SRC json
+       {
+           "properties": {
+               "delivery_tag": "13ce9ff2-c596-4471-84b6-94d3ef332041",
+               "delivery_mode": 2,
+               "correlation_id": "79bfa93e-c66b-4f45-b282-3b3835abcbad",
+               "body_encoding": "base64",
+               "delivery_info": {
+                   "priority": 0,
+                   "exchange": "celery",
+                   "routing_key": "celery"
+               },
+               "reply_to": "ee172d34-d646-3478-9126-7df1d127e6fc"
+           },
+           "body": "eyJ0aW1lbGltaXQiOiBbbnVsbCwgbnVsbF0sICJ0YXNrc2V0IjogbnVsbCwgInRhc2siOiAiYXBwLmFkZCIsICJleHBpcmVzIjogbnVsbCwgInJldHJpZXMiOiAwLCAidXRjIjogdHJ1ZSwgImNhbGxiYWNrcyI6IG51bGwsICJpZCI6ICI3OWJmYTkzZS1jNjZiLTRmNDUtYjI4Mi0zYjM4MzVhYmNiYWQiLCAiY2hvcmQiOiBudWxsLCAia3dhcmdzIjoge30sICJldGEiOiBudWxsLCAiYXJncyI6IFsxLCAyXSwgImVycmJhY2tzIjogbnVsbH0=",
+           "headers": {
+           },
+           "content-encoding": "utf-8",
+           "content-type": "application\/json"
+       }
+     #+END_SRC
+
+**** Here is task body
+
+     #+BEGIN_SRC python :session Python :results pp
+       import base64, json
+       json.loads(base64.decodebytes(b'eyJ0aW1lbGltaXQiOiBbbnVsbCwgbnVsbF0sICJ0YXNrc2V0IjogbnVsbCwgInRhc2siOiAiYXBwLmFkZCIsICJleHBpcmVzIjogbnVsbCwgInJldHJpZXMiOiAwLCAidXRjIjogdHJ1ZSwgImNhbGxiYWNrcyI6IG51bGwsICJpZCI6ICI3OWJmYTkzZS1jNjZiLTRmNDUtYjI4Mi0zYjM4MzVhYmNiYWQiLCAiY2hvcmQiOiBudWxsLCAia3dhcmdzIjoge30sICJldGEiOiBudWxsLCAiYXJncyI6IFsxLCAyXSwgImVycmJhY2tzIjogbnVsbH0=').decode())
+     #+END_SRC
+
+     #+RESULTS:
+     #+begin_example
+     {'args': [1, 2],
+      'callbacks': None,
+      'chord': None,
+      'errbacks': None,
+      'eta': None,
+      'expires': None,
+      'id': '79bfa93e-c66b-4f45-b282-3b3835abcbad',
+      'kwargs': {},
+      'retries': 0,
+      'task': 'app.add',
+      'taskset': None,
+      'timelimit': [None, None],
+      'utc': True}
+     #+end_example
+
+** How celery takes tasks from RabbitMQ broker?
+
+*** Quality of Service (QoS)
+    Simple mechanism to handle load for consumer.  Works as
+    "pre-fetch" marker.  Each consumer can say to RabbitMQ server how
+    many messages he wants to take before acknowledge.  This is also a
+    technique to reduce latency for message consuming.
+
+** How celery takes tasks from Redis broker?
+
+*** TODO What redis sentinel is?
+
+** How ETA tasks works in RabbitMQ broker?
+
+** How ETA tasks works in Redis broker?
+
+** rq scheduler (RQ ETA tasks)
+   It must be single scheduler instance running.  We use
+   Scheduler.enqueue_at and Scheduler.enqueue_in to push jobs ids into
+   single sorted set.  It named "rq:scheduler:scheduled_jobs".  ETA
+   timestamps used as scores and job keys used as values.  Scheduler
+   process all ETA scores from 0 to utcnow and sleeps for one minute.
+
+*** Problems
+
+**** Low granularity
+
+**** Lack of pipelines
+
+**** Job scheduled to queue at exactly ETA moment
+     This add additional lag for job processing and ETA isn't accurate
+
+** How *in worker* task distribution on cores works?
+
+** Why message priority in queue *doesn't* works in RabbitMQ broker?
+
+** How message priority in queue *does* works in Redis broker?
+
+** How rate limit works in the celery worker?
+   - Worker have state stored rate limits for each app.task key.  It
+     accept any message RabbitMQ gives it.  If rate limit for consumed
+     task lower than currently processed number of this task.  Then it
+     increment prefetch count, *don't* acknowledge task message and
+     save it for future work.  So if new workers appears in cluster
+     there is nothing to do.
+   - Redis: use the same technique with acknowledgment emulation.
+
+** How much does it costs to submit task with blocking io from asynchronous web handler?
+
+** What information celery stores in broker and backend?
+   - if backend enabled
+   - if backend disabled
+   - how this information changes in the case of links, groups and chords
+
+** How control commands works in celery?
+
+** Celery RabbitMQ cluster
+   RabbitMQ supports clusterization.  It works over erlang port
+   mapping daemon and erlang cookie authorization.  We add each node
+   to cluster manually.
+
+*** TODO HA rabbitmq
+
+*** Celery support multiple brokers (pyamqp transport)
+    This is bad practice because we need to support static list of
+    brokers in each application instance.  If we want to add rabbitmq
+    node we mast redeploy and restart each celery node.
+
+*** It is better to setup HAProxy
+    We can use load balancer to resolve nodes dynamically.  Or we can
+    setup DNS service with very short TTL value and resolve current
+    node dynamically.  RabbitMQ provide heartbeats so reconnection lag
+    will be little.
+
+** Does Redis broker supports clusterization?
+
+** Does Redis backends supports clusterization?
+   - Maybe it called sharding in this case.
+
+** Others already do that (django channels slide)
+   Django Channels.  It's a websockets and http2 processing mechanism
+   build on top of some kind of job queues.  They call this channels
+   (pattern from Go language).  Each websocket message stored in the
+   persistent queue and processed in the synchronous manner by the
+   worker process.  Redis is the backend supposed to use in the
+   production.  It can use multiple redis servers and spread the load
+   across them using sharding based on consistent hashing.  It may
+   scale by adding new worker instances.
+
+** How celery implements cancelation of already running tasks?
+
+** How task retry works in celery?
+
+** TODO How global pub/sub work in the redis cluster?
+
+** TODO master/slave redis?
+
+* Implementation required
+
+** Groups, chords in the RQ
+
+** Finish aiorq
+
+** Redis bluster RQ version
+
+* Ideas
+
+** Rabbit doesn't come easy slide
+   Slide with Hellowin album cover scan

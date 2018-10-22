@@ -1,0 +1,11 @@
+<h1>Services</h1>
+{% for service in services %}
+    <form method="POST" action="{% url 'subscribe-to-service' %}">
+        {% csrf_token %}
+        <input type="text" name="service-name" value="{{ service.name }}">
+        <input type="number" name="days" value="7">
+        <input type="submit" value="Subscribe">
+    </form>
+{% empty %}
+    <p>No services yet</p>
+{% endfor %}

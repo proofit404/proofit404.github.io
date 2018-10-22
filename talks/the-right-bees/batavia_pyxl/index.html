@@ -1,0 +1,80 @@
+<html>
+    <head>
+        <title>Pyxl Example</title>
+    </head>
+    <body>
+        <div id="fill-me">Not yet...</div>
+        <script type="text/javascript" src="batavia.js"></script>
+        <!-- Bandled PyXL library -->
+        <script id="batavia-pyxl" type="application/python-bytecode">
+Fg0NCgELfFgWAAAA4wAAAAAAAAAAAAAAAAEAAABAAAAAcwQAAABkAABTKQFOqQByAQAAAHIBAAAA
+cgEAAAD6C19faW5pdF9fLnB52gg8bW9kdWxlPgEAAABzAAAAAA==
+        </script>
+        <script id="batavia-pyxl.html" type="application/python-bytecode">
+Fg0NCtRLfFh6AAAA4wAAAAAAAAAAAAAAAAIAAABAAAAAcxwAAABkAABkAQCEAABaAABkAgBkAwCE
+AABaAQBkBABTKQVjAAAAAAAAAAABAAAAAgAAAEMAAABzEAAAAGQBAGQCAIQAAH0AAHwAAFMpA05j
+AQAAAAAAAAABAAAAAgAAAFMAAABzDAAAAGQBAHwAABdkAgAXUykDTnoEPGgxPnoFPC9oMT6pACkB
+2gF4cgEAAAByAQAAAPoHaHRtbC5wedoFaW5uZXIDAAAAcwIAAAAAAXoTeF9oMS48bG9jYWxzPi5p
+bm5lcnIBAAAAKQFyBAAAAHIBAAAAcgEAAAByAwAAANoEeF9oMQEAAABzBAAAAAACDANyBQAAAGMB
+AAAAAAAAAAEAAAABAAAAQwAAAHMEAAAAfAAAUykBTnIBAAAAKQHaBHRleHRyAQAAAHIBAAAAcgMA
+AADaB3Jhd2h0bWwJAAAAcwIAAAAAAXIHAAAATikCcgUAAAByBwAAAHIBAAAAcgEAAAByAQAAAHID
+AAAA2gg8bW9kdWxlPgEAAABzAgAAAAwI
+        </script>
+        <!-- Our index.py -->
+        <script id="batavia-index" type="application/python-bytecode">
+Fg0NCj8SfFiEAAAA4wAAAAAAAAAAAAAAAAMAAABAAAAAc1AAAABkAABkAQBsAABaAABkAABkAgBs
+AQBtAgBaAgABZQAAagMAagQAZAMAgwEAWgUAZQIAagYAgwAAZQIAagcAZAQAgwEAgwEAZQUAXwgA
+ZAEAUykF6QAAAABOKQHaBGh0bWx6B2ZpbGwtbWV6DEhlbGxvIFdvcmxkISkJ2gNkb23aBHB5eGxy
+AgAAAFoIZG9jdW1lbnRaDmdldEVsZW1lbnRCeUlkWgNkaXbaBHhfaDHaB3Jhd2h0bWxaCWlubmVy
+SFRNTKkAcgcAAAByBwAAAPoIaW5kZXgucHnaCDxtb2R1bGU+AgAAAHMGAAAADAEQAhIB
+        </script>
+        <script type="text/javascript">
+         window.vm = new batavia.VirtualMachine({
+             loader: function(name) {
+                 // Find the script element with the ID matching the
+                 // fully qualified module name (e.g., batavia-foo.bar.whiz)
+                 var element = document.getElementById('batavia-' + name);
+                 if (element === null) {
+                     // If the element doesn't exist, look for a javascript element.
+                     element = window[name];
+                     if (element === undefined) {
+                         // NOTE: BEGIN (custom loader)
+                         var stdlibModule = batavia.stdlib[name];
+                         if (stdlibModule) {
+                             return {
+                                 '__python__': true,
+                                 'bytecode': stdlibModule,
+                                 'filename': new batavia.types.Str("<input>")
+                             };
+                         }
+                         // NODE: END
+                         return null;
+                     } else {
+                         return {
+                             'javascript': element
+                         }
+                     }
+                 }
+
+                 // Look for the filename in the data-filename
+                 // attribute of script tag.
+                 var filename;
+                 if (element.dataset) {
+                     filename = element.dataset['filename'];
+                 } else {
+                     filename = "<input>";
+                 }
+
+                 // Strip all the whitespace out of the text content of
+                 // the script tag.
+                 return {
+                     '__python__': true,
+                     'bytecode': element.text.replace(/(\r\n|\n|\r)/gm, "").trim(),
+                     'filename': new batavia.types.Str(filename)
+                 };
+             }
+         });
+         window.vm.run('index', []);
+        </script>
+    </body>
+</html>

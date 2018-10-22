@@ -1,0 +1,87 @@
+* DONE What is a channel?
+  It is an ordered, first-in first-out queue with message expiry and
+  at-most-once delivery to only one listener at a time.
+* The real need for a system like this - persistent state for connections
+* Remember, Channels is network-transparent and can run on multiple workers, so you can’t just store things locally in global variables or similar.
+* groups are mostly for reply channels
+* DONE HTTP/2 server push
+* long polling
+* delivery once
+* crappy rabbitmq realization using kombu and threads
+* minimum added latency
+* message handler is a simple function
+  It's not a good way to write async code.  If we start processing
+  response how we stop processing response if we wait for another
+  system?  Multiple handlers?  Looks like twisted callbacks.
+* software stack problem
+  and how asyncio solves this
+* redis transport implementation details
+* alternatives
+* celery / rq / asgi protocols comparison
+* mention we can respond to http1.1 with asgi
+* DONE mention the is layers routing similar to DB router
+* show runserver difference with and without channels app enabled
+* does wsgi middlewares still works with daphne's runserver?
+* trace request life circle with pdb
+  if we don't have http.request consumer, how life circle changes?
+* Routing implementation details
+  - What is the source of the path keyword value?
+* client side websocket routing?
+* hardcoded channels' and groups' names are design problems
+* DONE does daphne use twisted friendly async libraries?
+** DONE does in support connection pull?
+* for what the hell runworker in the debugging mode serves static files
+* how channels_session decorator is implemented?
+* how to multiplex multiple chat rooms in one websocket?
+* substitute failed workers since daphne doesn't drop connections on error
+* how to propagate exceptions in the channel handler to the client?
+* cookies in websocket?
+* http_session decorator
+  How it's implemented?
+* why we need to send ?session_key in the websocket url
+* How websocket protocol work and in what stages worker get the message?
+* Enforce order
+  - Why is it necessary?
+  - How it works?
+* Describe community projects
+* tornado wsgi adapter
+  Tornado can pass wsgi requests directly to django, is it possible to
+  use same technique in twisted? Does mixed redis backend work same way?
+* What is the sharding principle for different channels
+* How WebsocketDemultiplexer works?
+* Andrew Godwin talk
+** Python isn't good for websockets
+   Example with eventlet
+** Started at 2014 on name django-onair
+** Websocket are for
+   - architecture is all about tradeoffs
+   - proxies and firewalls are problems
+   - we want to use http for page rendering
+   - goals
+     + streaming updates
+     + chat applications
+     + collaborative editing
+     + game backends
+** diagram of broadcast operation
+** then show diagram with two servers
+** channels is a foundation for running "async" at scale
+** brings a lot more to web sockets
+   - websockets
+   - task offloading
+   - chat/email integration
+   - IoT protocols
+** why two servers is the problem?
+   - stateful connections
+   - internal network
+   - bottlenecks
+** TODO channels-examples
+** multiplexing and data binding
+   - looks like data binding write a lot in to DB
+** javascript side of data binding
+   - connection termination handler and stuff
+** load testing
+   - is the ordering correct
+   - is the content not corrupted
+* In data binding how groups managed per model instances?
+  Does new *Group* created to track updates on specific model
+  instance?  For example new group for each post in the live blog.

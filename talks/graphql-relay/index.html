@@ -1,0 +1,93 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><link rel="stylesheet" type="text/css" href="css/reveal.css"><link rel="stylesheet" type="text/css" href="css/theme/serif.css" id="theme"><link rel="stylesheet" type="text/css" href="lib/css/github-gist.min.css"><link rel="stylesheet" type="text/css" href="css/customize.css"><title>GraphQL & Relay</title><script>var link = document.createElement( 'link' );
+link.rel = 'stylesheet';
+link.type = 'text/css';
+link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+document.getElementsByTagName( 'head' )[0].appendChild( link );</script><!--[if lt IE 9]><script src="lib/js/html5shiv.js"></script><![endif]--></head><body><div class="reveal"><div class="slides"><section><img class="logo" src="pic/logo.svg"><h2>GraphQL & Relay</h2><h3>Artem Malyshev</h3><h4>@proofit404</h4></section><section data-background="pic/todolist.png" data-background-size="contain"><br></section><section data-background-color="#FFFFFF"><h4>What's wrong with REST?</h4><img src="pic/server-roundtrips.png"><aside class="notes"><p>Hyperlinks</p><p>To many round trips</p></aside></section><section><h4>Expand relations</h4><pre><code class="json">{
+    "title": "Finish monthly growth report",
+    "category": "Growth Team",
+    "tasks": [
+        {"order": 1, "title": "Review samples"},
+        {"order": 2, "title": "Summarize"},
+        {"order": 3, "title": "Send to customer"},
+        ...
+    ],
+}</code></pre><aside class="notes"><p>DRF nested serializers as fields</p><p>Overfetching</p></aside></section><section><h4>Custom endpoints</h4><pre><code>/todos_with_everything_i_need
+
+/todos_with_everything_i_need_with_author_v2
+
+/todos_with_everything_i_need_for_samsung_smart_tv
+
+/tightly_coupled_endpoint_for_a_specific_client</code></pre><aside class="notes"><p>Unpleasant to work API</p></aside></section><section data-background="pic/man-data-analytics.jpg" data-background-size="contain" data-background-color="#6F7170"><br><aside class="notes"><p>We do not think in</p><p>endpoints or join tables</p></aside></section><section><img class="logo" src="pic/logo.svg"><h3>GraphQL</h3></section><section data-background-color="#FFFFFF"><img class="face-corner" src="pic/lee-byron.jpg"><br><a href="http://leebyron.com/">@leebyron</a></section><section><h4>Hello world</h4><pre><code>{
+  me {
+    name
+  }
+}</code></pre></section><section><h4>Hello world</h4><pre><code class="json">           {
+{            "data": {
+  me {          "me": {
+    name           "name": "Artem"
+  }             }
+}            }
+           }</code></pre></section><section><h4>Schema</h4><pre><code class="graphql">type Task {
+  id: ID!
+  title: String!
+  description: String!
+  createdBy: Employee!
+  assignedTo: Employee!
+  statusHistory: [Status]
+  comments: [Comment]
+}</code></pre></section><section><img src="pic/magic-cat.png"></section><section data-background-color="#3B3738"><img class="logo relay-bg" src="pic/relay.svg"><h3 class="relay-text">Relay</h3></section><section data-background="pic/marked-todolist.png" data-background-size="contain"><br></section><section><h4>Relay</h4><pre><code class="jsx small">class Task extends React.Component {
+  render() {
+    return &lt;li key={title}&gt;
+             &lt;b&gt;{title}&lt;/b&gt; {description}
+           &lt;/li&gt;
+  }
+}
+Task = Relay.createContainer(Task, {
+  task: () =&gt; Relay.QL`
+    fragment on Task {
+      title,
+      description,
+    }
+  `,
+});</code></pre></section><section><h4>Nesting</h4><pre><code class="jsx small">class TaskList extends React.Component {
+  render() {
+    return &lt;ul&gt; {this.props.tasks.map(
+      task => &lt;Task name={name} /&gt;
+    )} &lt;/ul&gt;;
+  }
+}</code></pre><pre><code class="jsx small">TaskList = Relay.createContainer(TaskList, {
+  tasks: () =&gt; Relay.QL`
+    tasks {
+      <mark style="font-weight: bold;">${Task.getFragment('task')}</mark>
+    }`,
+});</code></pre></section><section><h4>Conditional fetching</h4><pre><code class="jsx">Relay.createContainer(Task, {
+  initialVariables: { showComments: false },
+  task: () =&gt; Relay.QL`
+    fragment on Task {
+      title,
+      description,
+      comments <mark style="font-weight: bold;">@include(if: $showComments)</mark> {
+        author
+        text
+      }
+    }
+  `});</code></pre></section><section><h4>Cache</h4><pre><code class="graphql">                 {
+query {            "data": {
+  employees {        "employees": [
+    id                 { "id": "Y3JlYXRlZF9hd" }
+  }                  ],
+  tasks {            "tasks": [
+    id                 { "id": "C0tLTIwMTYtMD" }
+  }                  ]
+}                  }
+                 }</code></pre></section><section><h4>And more</h4><ul><li>Pagination</li><li>Optimistic updates</li><li>Deferred</li><li>Subscriptions</li></ul></section><section><img src="pic/apollo.png"></section><section><h4>Backend</h4><img src="pic/bill-lumbergh.jpg"></section><section><h3>Summarize</h3><h4>Pros</h4><ul><li>No extra roundtrips</li><li>No overfetching</li><li>Frontend goodies</li></ul><h4>Cons</h4><ul><li>Backend nightmare</li></ul></section><section><h2>Questions?</h2></section></div></div><script src="lib/js/head.min.js"></script><script src="js/reveal.js"></script><script src="lib/js/highlight.min.js"></script><script>hljs.initHighlightingOnLoad();</script><script>Reveal.initialize({
+    controls: false,
+    progress: false,
+    slideNumber: true,
+    history: true,
+    transition: 'none',
+    dependencies: [
+        { src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+        { src: 'plugin/notes/notes.js', async: true }
+    ]
+});</script></body></html>

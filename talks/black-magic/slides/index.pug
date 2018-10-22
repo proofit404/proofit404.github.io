@@ -1,0 +1,526 @@
+doctype html
+html
+  head
+    meta(charset='utf-8')
+    link(rel='stylesheet' type='text/css' href='css/reveal.css')
+    link(rel='stylesheet' type='text/css' href='css/theme/white.css')
+    link(rel='stylesheet' type='text/css' href='lib/css/github-gist.css')
+    link(rel='stylesheet' type='text/css' href='css/customize.css')
+    title Black Magic for Good Fairies
+    script.
+      var link = document.createElement( 'link' );
+      link.rel = 'stylesheet';
+      link.type = 'text/css';
+      link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+      document.getElementsByTagName( 'head' )[0].appendChild( link );
+  body
+    .reveal
+      .slides
+        section
+          h1 Black Magic for Good Fairies
+          h2 Artem Malyshev
+          h3 @proofit404
+        section
+          h1 Python for Humans
+          h3 they told me...
+          aside.notes.
+            Want to see how it was built
+        section
+          h1 ORLY?
+          aside.notes.
+            Fucking madness...
+        section
+          h1 Q
+        section
+          h2 Output
+          pre
+            code.hljs.shell.
+              tailf /tmp/q
+          pre
+            code.hljs.shell.
+              0.0s test: prefix + q(sep or '')=' '
+              0.0s test: 'xxx'
+              0.0s test: 'xxx '
+              0.0s foo('xxx')
+              0.0s -#{">"} 'xxx!!!'
+          aside.notes
+            | Print:
+            ul
+              li expression results
+              li variable values
+              li function arguments
+              li function return values
+        section
+          h2 Usage
+          pre
+            code.hljs.python.
+              import q
+              write(prefix + q(sep or ''))
+              write(q/prefix + (sep or ''))
+              write(q|prefix + (sep or ''))
+
+              @q
+              def foo(bar): ...
+          aside.notes
+            | It's OK on the first look, but
+        section
+          h2 Usage
+          pre
+            code.hljs.python.
+              import q
+              write(prefix + q#[mark.aggressive (]sep or ''#[mark.aggressive )])
+              write(q#[mark.aggressive /]prefix + (sep or ''))
+              write(q#[mark.aggressive |]prefix + (sep or ''))
+
+              #[mark.aggressive @]q
+              def foo(bar): ...
+          aside.notes
+            | We can:
+            ul
+              li call modules
+              li divide modules
+              li compare modules
+        section
+          h2 Replace module during its import
+          pre
+            code.hljs.python.
+              class Q(object):
+                  import inspect
+                  def __truediv__(self, arg):
+                      info = self.inspect.getframeinfo(...
+                      self.show(info.function, [arg])
+                      return arg
+
+              #[mark sys.modules#{'['}'q'#{']'} = Q()]
+          aside.notes
+            | Replace module
+            br
+            | Module cache is an object
+        section
+          h2 Replace module during its import
+          pre
+            code.hljs.python.
+              class Q(object):
+                  #[mark import inspect]
+                  def __truediv__(self, arg):
+                      info = self.inspect.getframeinfo(...
+                      self.show(info.function, [arg])
+                      return arg
+
+              sys.modules['q'] = Q()
+          aside.notes
+            | GC will kill global imports
+        section
+          h1 Logging
+        section
+          h2 usage
+          pre
+            code.hljs.python.
+              def my_func():
+                  logger.info('We are here')
+          h2 output
+          pre
+            code.
+              INFO:#[mark my_func]:We are here
+          aside.notes
+            | Function name in the output
+            br
+            | but we did not pass it
+        section
+          h2 Search who calls you
+          pre
+            code.hljs.python.
+              def get_caller():
+                  f = #[mark sys._getframe()]
+                  while hasattr(f, 'f_code'):
+                      filename = f.f_code.co_filename
+                      if filename == __file__:
+                          f = f.f_back
+                          continue
+                      return f.f_code.co_name
+        section
+          h2 Search who calls you
+          pre
+            code.hljs.python.
+              def get_caller():
+                  f = sys._getframe()
+                  while hasattr(f, 'f_code'):
+                      filename = f.f_code.co_filename
+                      if #[mark filename == __file__]:
+                          f = f.f_back
+                          continue
+                      return f.f_code.co_name
+        section
+          h1 Django
+        section
+          h2 Model exceptions
+          pre
+            code.hljs.python.
+              try:
+                  Entry.objects.get(id='foo')
+              except #[mark Entry].DoesNotExist:
+                  pass  # Caught it
+          aside.notes
+            | Normal classes does not have exception in their attributes
+        section
+          h2 Model exceptions
+          pre
+            code.hljs.python.
+              try:
+                  Entry.objects.get(id='foo')
+              except #[mark Post].DoesNotExist:
+                  pass  # Lost it
+          aside.notes
+            | Why we catch exception for certain model?
+        section
+          h2 Inheritance
+          pre
+            code.hljs.python.
+              class Entry(models.Model):
+                  field1 = models.CharField()
+                  field2 = models.IntegerField()
+          h2 class factories
+          pre
+            code.hljs.python.
+              Entry = ModelBase('Entry', (models.Model,), {
+                  'field1': models.CharField(),
+                  'field2': models.IntegerField(),
+              })
+        section
+          h2 Metaclasses
+          pre
+            code.hljs.python.
+              class ModelBase(type):
+                  """
+                  Metaclass for all models.
+                  """
+                  def __new__(cls, name, bases, attrs):
+                      new_class = type(cls, name, bases, {
+                          '__module__': module,
+                      })
+                      ...
+                      return new_class
+        section
+          h2 Introduce model exceptions
+          pre
+            code.hljs.python.
+              if not abstract:
+                  new_class.add_to_class(
+                      'DoesNotExist',
+                      #[mark subclass_exception](
+                          str('DoesNotExist'),
+                          (ObjectDoesNotExist,),
+                          module,
+                          attached_to=new_class))
+        section
+          h1 Sly
+          aside.notes.
+            Simple Lex Yacc
+        section
+          h2 Lexer
+          pre
+            code.hljs.python.
+              from sly import Lexer
+
+              class CalcLexer(Lexer):
+                  #[mark @_(r'\d+')]
+                  def NUMBER(self, t):
+                      t.value = int(t.value)
+                      return t
+          aside.notes.
+            Tokens
+        section
+          h2 Normal class
+          pre
+            code.hljs.python.
+              Traceback (most recent call last):
+                File "name_error_sly.py", line 6, in #{"<module>"}
+                  class CalcLexer(Lexer):
+                File "name_error_sly.py", line 7, in CalcLexer
+                  @_(r'\d+')
+              NameError: name '_' is not defined
+        section
+          h2 Extend class scope
+          pre
+            code.hljs.python.
+              class LexerType(type):
+                  @staticmethod
+                  def __prepare__(cls, *args, **kwargs):
+                      def _(pattern): ...
+                      d = {'_': _}
+                      return d
+
+              class Lexer(metaclass=LexerType):
+                  pass
+        section
+          h1 Ruby
+        section
+          h2 String interpolation
+          pre
+            code.hljs.ruby.
+              apples = 4
+              puts "I have \#{apples} apples"
+          h2 Output
+          pre
+            code.
+              I have 4 apples
+        section
+          h2 Python can do that
+          pre
+            code.hljs.python.
+              # coding: interpy
+              apples = 4
+              print('I have \#{apples} apples')
+          h2 Output
+          pre
+            code.
+              I have 4 apples
+        section
+          h1 React
+        section
+          h2 HTML inside JS? Why not
+          pre
+            code.hljs.js.
+              render: function () {
+                return (
+                  #{"<"}div className="comment"#{">"}
+                    #{"<"}h2 className="commentAuthor"#{">"}
+                      {this.props.author}
+                    #{"<"}/h2#{">"}
+                    {this.props.children}
+                  #{"<"}/div#{">"}
+                );
+              }
+        section
+          h2 Yep, in Python too
+          pre
+            code.hljs.python.
+              # coding: pyxl
+              def render(self):
+                  return (
+                      #{"<"}div class="comment"#{">"}
+                          #{"<"}h2 class="commentAuthor"#{">"}
+                              {self.author.name}
+                          #{"<"}/h2#{">"}
+                          {self.children()}
+                      #{"<"}/div#{">"})
+        section
+          h2 # coding: pyxl
+        section
+          h2 set file preprocessor
+          pre
+            code.hljs.python.
+              def search_function(encoding):
+                  return codecs.CodecInfo(
+                      name = 'pyxl',
+                      ...
+                  )
+
+              #[mark codecs.register(search_function)]
+        section
+          h1 pytest
+        section
+          h2 Test definition
+          pre
+            code.hljs.python.
+              def test_addition():
+                  x = 2 * 2
+                  y = 5
+                  assert x == y
+        section
+          h2 unittest output
+          pre
+            code.hljs.python.
+              Traceback (most recent call last):
+                File "test.py", line 89, in test_addition
+                  assert x == y
+              AssertionError
+        section
+          h2 pytest output
+          pre
+            code.hljs.shell.
+              #{">"} x == y
+              E assert 8 == 9
+              E  +  where 8 = #{"<"}bound method ...
+              E  +    where #{"<"}bound method ...
+              E  +      where #{"<"}test_dependencies ...
+        section
+          h2 File system hint
+          pre
+            code.hljs.shell.
+              ls -lA tests/__pycache__/
+              total 304
+              test_dependencies.cpython-26-PYTEST.pyc
+              test_dependencies.cpython-27-PYTEST.pyc
+              test_dependencies.cpython-34-PYTEST.pyc
+              test_dependencies.cpython-35-PYTEST.pyc
+        section
+          h2 Import hook
+          pre
+            code.hljs.python.
+              class AssertionRewritingHook(object):
+                  def find_module(self, name, path=None):
+                      fn = imp.find_module(name)
+                      cache_name = fn[:-3] + 'PYTEST.pyc'
+                      co = _read_pyc(fn)
+                      co = _rewrite_test(fn, co)
+                      _make_rewritten_pyc(co, cache_name)
+
+              #[mark sys.meta_path.append(AssertionRewritingHook())]
+        section
+          h2 Import hook
+          pre
+            code.hljs.python.
+              class AssertionRewritingHook(object):
+                  def find_module(self, name, path=None):
+                      fn = imp.find_module(name)
+                      cache_name = fn[:-3] + 'PYTEST.pyc'
+                      co = _read_pyc(fn)
+                      co = #[mark _rewrite_test](fn, co)
+                      _make_rewritten_pyc(co, cache_name)
+
+              sys.meta_path.append(AssertionRewritingHook())
+        section
+          h2 ast rewrite
+          pre
+            code.hljs.python.
+              import ast
+
+              class Int2Str(ast.NodeTransformer):
+
+                  def visit_#[mark Num](self, node):
+                      return ast.copy_location(
+                          ast.#[mark Str](s=str(node.n)),
+                          node,
+                      )
+        section
+          h2 how it works
+          pre
+            code.hljs.python.
+              exp = 'c = [1, 2, 3]'
+              exec(exp)
+              print(c)
+              # [1, 2, 3]
+              ast = ast.parse(exp)
+              new_exp = Int2Str().visit(ast)
+              exec(compile(new_exp))
+              print(c)
+              # ['1', '2', '3']
+        section
+          h1 jinja2
+        section
+          h2 html in the python traceback
+          pre
+            code.hljs.python.
+              Traceback (most recent call last):
+                File "jinja2/environment.py", line 989
+                  return handle_exception(exc_info, True)
+                File "jinja2/environment.py", line 754
+                  reraise(exc_type, exc_value, tb)
+                File "jinja2/_compat.py", line 37
+                  raise value.with_traceback(tb)
+                File #[mark "templates/index.html"], line 5
+                  {{ test() }}
+              UndefinedError: 'test' is undefined
+        section
+          h2 original error
+          pre
+            code.hljs.python.
+              try:
+                  hello # #{"<"}- NameError here
+              except Exception as e:
+                  tb = #[mark make_tb]()
+                  raise e.with_traceback(tb)
+        section
+          h2 fake error location
+          pre
+            code.hljs.python.
+              def make_tb():
+                  exc_type, exc_value, tb = sys.exc_info()
+                  filename = #[mark 'xxx.html']
+                  src = '\n' * 22 + 'raise exc_value'
+                  code = compile(src, #[mark filename], 'exec')
+                  try:
+                      exec(code, {'exc_value': exc_type()})
+                  except:
+                      return sys.exc_info()[2].tb_next
+        section
+          h2 fake error location
+          pre
+            code.hljs.python.
+              def make_tb():
+                  exc_type, exc_value, tb = sys.exc_info()
+                  filename = 'xxx.html'
+                  src = '\n' * 22 + 'raise exc_value'
+                  code = compile(src, filename, 'exec')
+                  try:
+                      #[mark exec](code, {'exc_value': exc_type()})
+                  except:
+                      return sys.#[mark exc_info]()[2].tb_next
+        section
+          h2 Faked
+          pre
+            code.hljs.python.
+              Traceback (most recent call last):
+                File "tb_rewrite.py", line 25, in #{"<"}module#{">"}
+                  raise e.with_traceback(tb)
+                File #[mark "xxx.html"], line 22, in html
+                  {{ hello }}
+              NameError: name 'hello' is not defined
+        section
+          h2 skip internal frames
+          pre
+            code.hljs.python.
+              try:
+                  tb_set_next = _init_ugly_crap()
+              except:
+                  pass
+              del _init_ugly_crap
+        section
+          h2 we have to deal with this crap...
+          pre
+            code.hljs.python.
+              import ctypes
+
+              class _PyObject(ctypes.Structure):
+                  pass
+
+              class _Traceback(_PyObject):
+                  pass
+
+              _Traceback._fields_ = [
+                  ('tb_next', ctypes.POINTER(_Traceback)),
+                  ('tb_frame', ctypes.POINTER(_PyObject)),
+              ]
+        section
+          h2 Let's patch immutable object
+          pre
+            code.hljs.python.
+              def tb_set_next(tb, next):
+
+                  obj = _Traceback.from_address(id(tb))
+                  old = _Traceback.from_address(id(tb.tb_next))
+                  old.ob_refcnt -= 1
+                  next = _Traceback.from_address(id(next))
+                  next.ob_refcnt += 1
+                  obj.tb_next = #[mark ctypes.pointer](next)
+        section
+          h1 It's magic.
+          h1 Isn't it?
+        section
+          h1 Questions?
+    script(src='lib/js/head.min.js')
+    script(src='js/reveal.js')
+    script(src='lib/js/highlight.min.js')
+    script.
+      hljs.initHighlightingOnLoad();
+    script.
+      Reveal.initialize({
+          controls: false,
+          progress: false,
+          slideNumber: true,
+          history: true,
+          dependencies: [
+              { src: 'plugin/notes/notes.js', async: true }
+          ]
+      });

@@ -1,0 +1,236 @@
+[
+    {
+        "model": "taskmanager.employee",
+        "pk": 1,
+        "fields": {
+            "password": "pbkdf2_sha256$30000$Ck4xYtq8N7sj$gH4Lh9+D1ntxWjdumcoxLV5Qgmft9vq1fBpFJ0hIO7s=",
+            "last_login": "2017-04-06T23:23:16Z",
+            "is_superuser": true,
+            "username": "master",
+            "first_name": "Me",
+            "last_name": "Myself",
+            "email": "master@example.com",
+            "is_staff": true,
+            "is_active": true,
+            "date_joined": "2017-04-06T23:21:27Z",
+            "chief": null,
+            "groups": [],
+            "user_permissions": []
+        }
+    },
+    {
+        "model": "taskmanager.employee",
+        "pk": 2,
+        "fields": {
+            "password": "hoaehtuoehte",
+            "last_login": "2017-04-06T23:24:38Z",
+            "is_superuser": false,
+            "username": "tom",
+            "first_name": "Tom",
+            "last_name": "Small",
+            "email": "tomsmall@example.com",
+            "is_staff": false,
+            "is_active": true,
+            "date_joined": "2017-04-06T23:24:18Z",
+            "chief": 1,
+            "groups": [],
+            "user_permissions": []
+        }
+    },
+    {
+        "model": "taskmanager.employee",
+        "pk": 3,
+        "fields": {
+            "password": "hsnaehtnoaehtnuoeahtnoeu",
+            "last_login": "2017-04-06T23:26:00Z",
+            "is_superuser": false,
+            "username": "lisa",
+            "first_name": "Lisa",
+            "last_name": "Simpson",
+            "email": "lisa@example.com",
+            "is_staff": false,
+            "is_active": true,
+            "date_joined": "2017-04-06T23:25:48Z",
+            "chief": 2,
+            "groups": [],
+            "user_permissions": []
+        }
+    },
+    {
+        "model": "taskmanager.employee",
+        "pk": 4,
+        "fields": {
+            "password": "htnaouhtoahtnuaeo",
+            "last_login": "2017-04-06T23:37:59Z",
+            "is_superuser": false,
+            "username": "mrx",
+            "first_name": "unknown",
+            "last_name": "unknown",
+            "email": "unknown@gmail.com",
+            "is_staff": false,
+            "is_active": true,
+            "date_joined": "2017-04-06T23:26:31Z",
+            "chief": 2,
+            "groups": [],
+            "user_permissions": []
+        }
+    },
+    {
+        "model": "taskmanager.employee",
+        "pk": 5,
+        "fields": {
+            "password": "hthtnoehtuoehtnuoe",
+            "last_login": "2017-04-06T23:39:36Z",
+            "is_superuser": false,
+            "username": "bart",
+            "first_name": "Bart",
+            "last_name": "Simpon",
+            "email": "bart@example.com",
+            "is_staff": false,
+            "is_active": true,
+            "date_joined": "2017-04-06T23:39:21Z",
+            "chief": 2,
+            "groups": [],
+            "user_permissions": []
+        }
+    },
+    {
+        "model": "taskmanager.employee",
+        "pk": 6,
+        "fields": {
+            "password": "nsthkiuansthuonathuot",
+            "last_login": "2017-04-06T23:40:38Z",
+            "is_superuser": false,
+            "username": "fernando",
+            "first_name": "Fernando",
+            "last_name": "Boretti",
+            "email": "fernando@gmail.com",
+            "is_staff": false,
+            "is_active": true,
+            "date_joined": "2017-04-06T23:40:25Z",
+            "chief": 3,
+            "groups": [],
+            "user_permissions": []
+        }
+    },
+    {
+        "model": "taskmanager.comment",
+        "pk": 1,
+        "fields": {
+            "author": 1,
+            "task": 2,
+            "date": "2017-04-07T00:48:18Z",
+            "text": "ASAP! Dead line at weekend!"
+        }
+    },
+    {
+        "model": "taskmanager.comment",
+        "pk": 2,
+        "fields": {
+            "author": 3,
+            "task": 5,
+            "date": "2017-04-07T00:49:41Z",
+            "text": "Can wait until Monday."
+        }
+    },
+    {
+        "model": "taskmanager.status",
+        "pk": 1,
+        "fields": {
+            "name": "s",
+            "task": 1,
+            "date": "2017-04-07T00:50:20Z",
+            "changed_by": 1
+        }
+    },
+    {
+        "model": "taskmanager.status",
+        "pk": 2,
+        "fields": {
+            "name": "c",
+            "task": 2,
+            "date": "2017-04-07T00:51:03Z",
+            "changed_by": 2
+        }
+    },
+    {
+        "model": "taskmanager.status",
+        "pk": 3,
+        "fields": {
+            "name": "n",
+            "task": 3,
+            "date": "2017-04-07T00:51:14Z",
+            "changed_by": 3
+        }
+    },
+    {
+        "model": "taskmanager.status",
+        "pk": 4,
+        "fields": {
+            "name": "r",
+            "task": 4,
+            "date": "2017-04-07T00:51:23Z",
+            "changed_by": 5
+        }
+    },
+    {
+        "model": "taskmanager.status",
+        "pk": 5,
+        "fields": {
+            "name": "n",
+            "task": 5,
+            "date": "2017-04-07T00:51:35Z",
+            "changed_by": 6
+        }
+    },
+    {
+        "model": "taskmanager.task",
+        "pk": 1,
+        "fields": {
+            "title": "Create presentation",
+            "description": "Prepare GraphQL talk",
+            "created_by": 1,
+            "assigned_to": 2
+        }
+    },
+    {
+        "model": "taskmanager.task",
+        "pk": 2,
+        "fields": {
+            "title": "Flight to Minsk",
+            "description": "Move to the Minsk city",
+            "created_by": 2,
+            "assigned_to": 3
+        }
+    },
+    {
+        "model": "taskmanager.task",
+        "pk": 3,
+        "fields": {
+            "title": "Clean up coworking",
+            "description": "Do cleanup",
+            "created_by": 3,
+            "assigned_to": 6
+        }
+    },
+    {
+        "model": "taskmanager.task",
+        "pk": 4,
+        "fields": {
+            "title": "Call mom",
+            "description": "Tell her about your day",
+            "created_by": 2,
+            "assigned_to": 5
+        }
+    },
+    {
+        "model": "taskmanager.task",
+        "pk": 5,
+        "fields": {
+            "title": "Authorize",
+            "description": "Get full name and go through authorization system",
+            "created_by": 2,
+            "assigned_to": 4
+        }
+    }
+]

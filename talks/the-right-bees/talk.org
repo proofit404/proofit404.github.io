@@ -1,0 +1,117 @@
+* Talk
+** DONE Who I am!
+** DONE What is the reason?
+** DONE What he achieve with TKinter.
+* Toga
+** DONE Explain setup.py environment markers and import magic
+   In the setup.py we have environment markers which choice proper
+   dependencies according to operation system we running in the
+   installation process.  This is meaningful only on desktops since
+   installation with setup.py is possible on desktops only.  Another
+   platforms has different ways of installation.  After we have proper
+   package setup.  We install toga.  It determine current environment
+   at runtime and import __all__ from proper package which we install
+   earlier.  So toga.App will be actual implementation class.  toga
+   package itself contains import hook and base interfaces definition.
+** DONE Explain who the hell PyGTK, python-gi and dist packages works
+   We install python3-gi into global python.  Then toga import
+   toga_gtk.app module.  This module tries to import gi.  If this
+   fails it try to find global gi installation and create symlink in
+   the site_packages.  This makes this packages accessible in the
+   virtual environment.
+** DONE toga.cocoa
+   It use the same mechanism to load all necessary macOS libs.
+** DONE colosseum
+   Colosseum is partial flexbox algorithm implementation.  It can
+   calculate layout for any tree-like object structure.  It use
+   duck-typing API for this.  It require that each element in tree
+   must have this attributes: children (list of same class instances),
+   parent (same class instance) and style (CSS instance).  When we
+   access MyNode.style.layout it will calculate proper layout for each
+   element in our layout.  Base widget stored in the
+   toga.core.interface.widgets.base module.  Sigh, we need to import
+   each widget type and build objects hierarchy manually.  In each
+   widget constructor we may pass CSS object with its properties
+   specified.  Looks like inline CSS with horrible API.
+
+   It is possible to pass children as list to the constructor.  But I
+   prefer something like pug/Jade templates with jinja2 like
+   expressions in it.  Se browser example for code.
+
+   Also you passes events handler like function to argument.  This is
+   smells like button onClick to me.
+** DONE my examples directory contains toga_jade
+   It implements declarative components hierarchy definition with
+   PyJade parser.
+* Brief case
+** TODO cookie cutter
+** TODO ant.xml
+* Apple support
+** TODO How we can create an Objective C instance from python?
+** TODO Rubicon deteils
+** TODO How we use python interpreter on apple watch?
+** TODO What output format we get?
+* VOC
+** TODO How name spaces are implemented?
+** TODO How objects are present in memory?
+** DONE Java file bootstrap
+   It search for try_voc.app module.  Load this module from java class
+   and through reflection runs its main method.  Return value will be
+   application listener/activity and base methods like onStart,
+   onResume and onDestroy will be mapped to the result of main call.
+
+   If we return toga.App it will have all necessary methods.  Also it
+   use voc java implementation of activity. See
+
+   #+BEGIN_SRC python
+     from android import PythonActivity
+   #+END_SRC
+* Batavia
+** DONE How webpack module.export = '<base64>' corresponds here?
+   Some stdlib module packed into batavia.js directly.  When
+   javascript require('./stdlib/this') executed, module bytecode
+   base64 string will be a result of this evaluation.
+** DONE How import system was implemented?
+   In the batavia we have virtual machine loader and byte_IMPORT_NAME
+   methods.  The first one uses dom element search to find script tags
+   containing python bytecode on the page.  The second one is
+   triggered by VM when process python bytecode import statement.  It
+   tries to get modules object[module name].  If this operation was
+   successful it decode base64 and return new frame.  If no, it tries
+   to do the same with stdlib object.  If failed, it calls loader.
+** DONE Is it necessary to write python bytecode inside script tags?
+   You can use any element tag.  The only requirement with default
+   loader is that element id must have
+   'batavia-package.module.submodule' form.
+** DONE webpack vm loader and hot reload?
+   See custom loader in the pyxl example and generated stdlib.js with
+   new compile_stdlib module.
+** DONE React?
+   Python has pyxl library.  It works before bytecode compiler stage
+   when codecs applies.  So we only need pyxl.html library bundled to
+   run in browser.  At this demo we use stripped version, because
+   original one requires re library which depends on C implementation.
+** DONE How threading was implemented?
+   Looks like it's the biggest project TODO.
+** DONE How virtual machine is implemented?
+   We have javascript marshal library, which can read pyc byte string
+   into types defined in JavaScript.  This done with recursive
+   function and huge switch statement.  Then VM create Frame object
+   from this Code object.  This frame object operation function is
+   *applied* with VM instance as function *this*.  It calculates frame
+   opcodes until they ends or error occurs.  Opcodes mapped to the VM
+   methods or calculated inplace.
+** DONE How objects and dictionaries are implemented?
+   Python objects presented as plain JavaScript objects.  They have
+   __dict__ property contains Dict JavaScript object.  Dict dunder
+   methods like __lt__ are regular javascript methods stored in the
+   Dict prototype.  In function objects __call__ property is present.
+   It contains anonymous function which can inspect python arguments
+   and run given frame in the VM.  Method objects contain __call__
+   property with anonymous function which wraps Function and pass
+   instance object as first argument.  Static methods are not
+   implemented.
+* DONE Summarize
+** The very first one sane way to bring python to browser and native development
+* DONE Project links
+* DONE ?

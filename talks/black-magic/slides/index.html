@@ -1,0 +1,233 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><link rel="stylesheet" type="text/css" href="css/reveal.css"><link rel="stylesheet" type="text/css" href="css/theme/white.css"><link rel="stylesheet" type="text/css" href="lib/css/github-gist.css"><link rel="stylesheet" type="text/css" href="css/customize.css"><title>Black Magic for Good Fairies</title><script>var link = document.createElement( 'link' );
+link.rel = 'stylesheet';
+link.type = 'text/css';
+link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+document.getElementsByTagName( 'head' )[0].appendChild( link );</script></head><body><div class="reveal"><div class="slides"><section><h1>Black Magic for Good Fairies</h1><h2>Artem Malyshev</h2><h3>@proofit404</h3></section><section><h1>Python for Humans</h1><h3>they told me...</h3><aside class="notes">Want to see how it was built</aside></section><section><h1>ORLY?</h1><aside class="notes">Fucking madness...</aside></section><section><h1>Q</h1></section><section><h2>Output</h2><pre><code class="hljs shell">tailf /tmp/q</code></pre><pre><code class="hljs shell">0.0s test: prefix + q(sep or '')=' '
+0.0s test: 'xxx'
+0.0s test: 'xxx '
+0.0s foo('xxx')
+0.0s -&gt; 'xxx!!!'</code></pre><aside class="notes">Print:<ul><li>expression results</li><li>variable values</li><li>function arguments</li><li>function return values</li></ul></aside></section><section><h2>Usage</h2><pre><code class="hljs python">import q
+write(prefix + q(sep or ''))
+write(q/prefix + (sep or ''))
+write(q|prefix + (sep or ''))
+
+@q
+def foo(bar): ...</code></pre><aside class="notes">It's OK on the first look, but</aside></section><section><h2>Usage</h2><pre><code class="hljs python">import q
+write(prefix + q<mark class="aggressive">(</mark>sep or ''<mark class="aggressive">)</mark>)
+write(q<mark class="aggressive">/</mark>prefix + (sep or ''))
+write(q<mark class="aggressive">|</mark>prefix + (sep or ''))
+
+<mark class="aggressive">@</mark>q
+def foo(bar): ...</code></pre><aside class="notes">We can:<ul><li>call modules</li><li>divide modules</li><li>compare modules</li></ul></aside></section><section><h2>Replace module during its import</h2><pre><code class="hljs python">class Q(object):
+    import inspect
+    def __truediv__(self, arg):
+        info = self.inspect.getframeinfo(...
+        self.show(info.function, [arg])
+        return arg
+
+<mark>sys.modules['q'] = Q()</mark></code></pre><aside class="notes">Replace module<br>Module cache is an object</aside></section><section><h2>Replace module during its import</h2><pre><code class="hljs python">class Q(object):
+    <mark>import inspect</mark>
+    def __truediv__(self, arg):
+        info = self.inspect.getframeinfo(...
+        self.show(info.function, [arg])
+        return arg
+
+sys.modules['q'] = Q()</code></pre><aside class="notes">GC will kill global imports</aside></section><section><h1>Logging</h1></section><section><h2>usage</h2><pre><code class="hljs python">def my_func():
+    logger.info('We are here')</code></pre><h2>output</h2><pre><code>INFO:<mark>my_func</mark>:We are here</code></pre><aside class="notes">Function name in the output<br>but we did not pass it</aside></section><section><h2>Search who calls you</h2><pre><code class="hljs python">def get_caller():
+    f = <mark>sys._getframe()</mark>
+    while hasattr(f, 'f_code'):
+        filename = f.f_code.co_filename
+        if filename == __file__:
+            f = f.f_back
+            continue
+        return f.f_code.co_name</code></pre></section><section><h2>Search who calls you</h2><pre><code class="hljs python">def get_caller():
+    f = sys._getframe()
+    while hasattr(f, 'f_code'):
+        filename = f.f_code.co_filename
+        if <mark>filename == __file__</mark>:
+            f = f.f_back
+            continue
+        return f.f_code.co_name</code></pre></section><section><h1>Django</h1></section><section><h2>Model exceptions</h2><pre><code class="hljs python">try:
+    Entry.objects.get(id='foo')
+except <mark>Entry</mark>.DoesNotExist:
+    pass  # Caught it</code></pre><aside class="notes">Normal classes does not have exception in their attributes</aside></section><section><h2>Model exceptions</h2><pre><code class="hljs python">try:
+    Entry.objects.get(id='foo')
+except <mark>Post</mark>.DoesNotExist:
+    pass  # Lost it</code></pre><aside class="notes">Why we catch exception for certain model?</aside></section><section><h2>Inheritance</h2><pre><code class="hljs python">class Entry(models.Model):
+    field1 = models.CharField()
+    field2 = models.IntegerField()</code></pre><h2>class factories</h2><pre><code class="hljs python">Entry = ModelBase('Entry', (models.Model,), {
+    'field1': models.CharField(),
+    'field2': models.IntegerField(),
+})</code></pre></section><section><h2>Metaclasses</h2><pre><code class="hljs python">class ModelBase(type):
+    """
+    Metaclass for all models.
+    """
+    def __new__(cls, name, bases, attrs):
+        new_class = type(cls, name, bases, {
+            '__module__': module,
+        })
+        ...
+        return new_class</code></pre></section><section><h2>Introduce model exceptions</h2><pre><code class="hljs python">if not abstract:
+    new_class.add_to_class(
+        'DoesNotExist',
+        <mark>subclass_exception</mark>(
+            str('DoesNotExist'),
+            (ObjectDoesNotExist,),
+            module,
+            attached_to=new_class))</code></pre></section><section><h1>Sly</h1><aside class="notes">Simple Lex Yacc</aside></section><section><h2>Lexer</h2><pre><code class="hljs python">from sly import Lexer
+
+class CalcLexer(Lexer):
+    <mark>@_(r'\d+')</mark>
+    def NUMBER(self, t):
+        t.value = int(t.value)
+        return t</code></pre><aside class="notes">Tokens</aside></section><section><h2>Normal class</h2><pre><code class="hljs python">Traceback (most recent call last):
+  File "name_error_sly.py", line 6, in &lt;module&gt;
+    class CalcLexer(Lexer):
+  File "name_error_sly.py", line 7, in CalcLexer
+    @_(r'\d+')
+NameError: name '_' is not defined</code></pre></section><section><h2>Extend class scope</h2><pre><code class="hljs python">class LexerType(type):
+    @staticmethod
+    def __prepare__(cls, *args, **kwargs):
+        def _(pattern): ...
+        d = {'_': _}
+        return d
+
+class Lexer(metaclass=LexerType):
+    pass</code></pre></section><section><h1>Ruby</h1></section><section><h2>String interpolation</h2><pre><code class="hljs ruby">apples = 4
+puts "I have #{apples} apples"</code></pre><h2>Output</h2><pre><code>I have 4 apples</code></pre></section><section><h2>Python can do that</h2><pre><code class="hljs python"># coding: interpy
+apples = 4
+print('I have #{apples} apples')</code></pre><h2>Output</h2><pre><code>I have 4 apples</code></pre></section><section><h1>React</h1></section><section><h2>HTML inside JS? Why not</h2><pre><code class="hljs js">render: function () {
+  return (
+    &lt;div className="comment"&gt;
+      &lt;h2 className="commentAuthor"&gt;
+        {this.props.author}
+      &lt;/h2&gt;
+      {this.props.children}
+    &lt;/div&gt;
+  );
+}</code></pre></section><section><h2>Yep, in Python too</h2><pre><code class="hljs python"># coding: pyxl
+def render(self):
+    return (
+        &lt;div class="comment"&gt;
+            &lt;h2 class="commentAuthor"&gt;
+                {self.author.name}
+            &lt;/h2&gt;
+            {self.children()}
+        &lt;/div&gt;)</code></pre></section><section><h2># coding: pyxl</h2></section><section><h2>set file preprocessor</h2><pre><code class="hljs python">def search_function(encoding):
+    return codecs.CodecInfo(
+        name = 'pyxl',
+        ...
+    )
+
+<mark>codecs.register(search_function)</mark></code></pre></section><section><h1>pytest</h1></section><section><h2>Test definition</h2><pre><code class="hljs python">def test_addition():
+    x = 2 * 2
+    y = 5
+    assert x == y</code></pre></section><section><h2>unittest output</h2><pre><code class="hljs python">Traceback (most recent call last):
+  File "test.py", line 89, in test_addition
+    assert x == y
+AssertionError</code></pre></section><section><h2>pytest output</h2><pre><code class="hljs shell">&gt; x == y
+E assert 8 == 9
+E  +  where 8 = &lt;bound method ...
+E  +    where &lt;bound method ...
+E  +      where &lt;test_dependencies ...</code></pre></section><section><h2>File system hint</h2><pre><code class="hljs shell">ls -lA tests/__pycache__/
+total 304
+test_dependencies.cpython-26-PYTEST.pyc
+test_dependencies.cpython-27-PYTEST.pyc
+test_dependencies.cpython-34-PYTEST.pyc
+test_dependencies.cpython-35-PYTEST.pyc</code></pre></section><section><h2>Import hook</h2><pre><code class="hljs python">class AssertionRewritingHook(object):
+    def find_module(self, name, path=None):
+        fn = imp.find_module(name)
+        cache_name = fn[:-3] + 'PYTEST.pyc'
+        co = _read_pyc(fn)
+        co = _rewrite_test(fn, co)
+        _make_rewritten_pyc(co, cache_name)
+
+<mark>sys.meta_path.append(AssertionRewritingHook())</mark></code></pre></section><section><h2>Import hook</h2><pre><code class="hljs python">class AssertionRewritingHook(object):
+    def find_module(self, name, path=None):
+        fn = imp.find_module(name)
+        cache_name = fn[:-3] + 'PYTEST.pyc'
+        co = _read_pyc(fn)
+        co = <mark>_rewrite_test</mark>(fn, co)
+        _make_rewritten_pyc(co, cache_name)
+
+sys.meta_path.append(AssertionRewritingHook())</code></pre></section><section><h2>ast rewrite</h2><pre><code class="hljs python">import ast
+
+class Int2Str(ast.NodeTransformer):
+
+    def visit_<mark>Num</mark>(self, node):
+        return ast.copy_location(
+            ast.<mark>Str</mark>(s=str(node.n)),
+            node,
+        )</code></pre></section><section><h2>how it works</h2><pre><code class="hljs python">exp = 'c = [1, 2, 3]'
+exec(exp)
+print(c)
+# [1, 2, 3]
+ast = ast.parse(exp)
+new_exp = Int2Str().visit(ast)
+exec(compile(new_exp))
+print(c)
+# ['1', '2', '3']</code></pre></section><section><h1>jinja2</h1></section><section><h2>html in the python traceback</h2><pre><code class="hljs python">Traceback (most recent call last):
+  File "jinja2/environment.py", line 989
+    return handle_exception(exc_info, True)
+  File "jinja2/environment.py", line 754
+    reraise(exc_type, exc_value, tb)
+  File "jinja2/_compat.py", line 37
+    raise value.with_traceback(tb)
+  File <mark>"templates/index.html"</mark>, line 5
+    {{ test() }}
+UndefinedError: 'test' is undefined</code></pre></section><section><h2>original error</h2><pre><code class="hljs python">try:
+    hello # &lt;- NameError here
+except Exception as e:
+    tb = <mark>make_tb</mark>()
+    raise e.with_traceback(tb)</code></pre></section><section><h2>fake error location</h2><pre><code class="hljs python">def make_tb():
+    exc_type, exc_value, tb = sys.exc_info()
+    filename = <mark>'xxx.html'</mark>
+    src = '\n' * 22 + 'raise exc_value'
+    code = compile(src, <mark>filename</mark>, 'exec')
+    try:
+        exec(code, {'exc_value': exc_type()})
+    except:
+        return sys.exc_info()[2].tb_next</code></pre></section><section><h2>fake error location</h2><pre><code class="hljs python">def make_tb():
+    exc_type, exc_value, tb = sys.exc_info()
+    filename = 'xxx.html'
+    src = '\n' * 22 + 'raise exc_value'
+    code = compile(src, filename, 'exec')
+    try:
+        <mark>exec</mark>(code, {'exc_value': exc_type()})
+    except:
+        return sys.<mark>exc_info</mark>()[2].tb_next</code></pre></section><section><h2>Faked</h2><pre><code class="hljs python">Traceback (most recent call last):
+  File "tb_rewrite.py", line 25, in &lt;module&gt;
+    raise e.with_traceback(tb)
+  File <mark>"xxx.html"</mark>, line 22, in html
+    {{ hello }}
+NameError: name 'hello' is not defined</code></pre></section><section><h2>skip internal frames</h2><pre><code class="hljs python">try:
+    tb_set_next = _init_ugly_crap()
+except:
+    pass
+del _init_ugly_crap</code></pre></section><section><h2>we have to deal with this crap...</h2><pre><code class="hljs python">import ctypes
+
+class _PyObject(ctypes.Structure):
+    pass
+
+class _Traceback(_PyObject):
+    pass
+
+_Traceback._fields_ = [
+    ('tb_next', ctypes.POINTER(_Traceback)),
+    ('tb_frame', ctypes.POINTER(_PyObject)),
+]</code></pre></section><section><h2>Let's patch immutable object</h2><pre><code class="hljs python">def tb_set_next(tb, next):
+
+    obj = _Traceback.from_address(id(tb))
+    old = _Traceback.from_address(id(tb.tb_next))
+    old.ob_refcnt -= 1
+    next = _Traceback.from_address(id(next))
+    next.ob_refcnt += 1
+    obj.tb_next = <mark>ctypes.pointer</mark>(next)</code></pre></section><section><h1>It's magic.</h1><h1>Isn't it?</h1></section><section><h1>Questions?</h1></section></div></div><script src="lib/js/head.min.js"></script><script src="js/reveal.js"></script><script src="lib/js/highlight.min.js"></script><script>hljs.initHighlightingOnLoad();</script><script>Reveal.initialize({
+    controls: false,
+    progress: false,
+    slideNumber: true,
+    history: true,
+    dependencies: [
+        { src: 'plugin/notes/notes.js', async: true }
+    ]
+});</script></body></html>

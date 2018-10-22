@@ -1,0 +1,5 @@
+#!/bin/bash
+
+. ./_args
+
+USE_REDIS=t celery -A app worker -n redis_worker_$RANDOM

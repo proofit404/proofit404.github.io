@@ -1,0 +1,20 @@
+* Main and sub-threads intercommunication
+** AsyncToSync class
+   - call_soon_threadsafe
+   - concurrent futures implementation
+** SyncToAsunc class
+   - calls run in executor
+* Daphne
+  - now uses applications instead of channel layers
+  - reply_channels completely removed
+  - moves completely to asyncio over twisted instead of pure twisted
+  - uses asyncio.Queue as base transport between twisted protocols and
+    channels applications
+* Channels
+  - AsyncConsumer
+  - SyncConsumer and CallBouncer
+  - http chunked bodies not work
+  - run worker goes away
+* Redis
+  - consumers runs inside Daphne and different Daphne processes
+    interacts over redis.

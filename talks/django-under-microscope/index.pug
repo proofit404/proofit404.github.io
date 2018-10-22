@@ -1,0 +1,460 @@
+doctype html
+html
+  head
+    meta(charset="utf-8")
+    meta(name="description" content="Django under microscope")
+    meta(name="author" content="Artem Malyshev")
+    meta(name="apple-mobile-web-app-capable" content="yes")
+    meta(name="apple-mobile-web-app-status-bar-style" content="black-translucent")
+    meta(name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no")
+    title Django under microscope
+  body
+    .reveal
+      .slides
+        section
+          h2 Django under microscope
+          h3 Artem Malyshev
+          h4 @proofit404
+        section
+          h3 Who
+          h5 Use Python for 5 years
+          h5 Early rannts
+          h5 Django Channels 1.0
+          h5
+              a(href="https://dry-python.org") Dry Python
+        section
+          img(src=require("./pics/django-hello-world.png")).plain
+          aside.notes.
+            This is how we know it works
+        section
+          img(src=require("./pics/terminal-run-server.png")).plain
+          aside.notes.
+            This is how we start it
+        section
+          h3 Installation
+          pre
+            code.hljs.shell.
+              $ pip install Django
+          pre
+            code.hljs.python.
+              # setup.py
+              from setuptools import find_packages, setup
+
+              setup(
+                  name='Django',
+                  entry_points={
+                    'console_scripts': [
+                      'django-admin #{"="}
+                        django.core.management:execute_from_command_line'
+                    ]
+                  },
+              )
+          aside.notes.
+            Everything starts from the installation
+        section
+          h5 Bootstrap
+          pre
+            code.hljs.python.
+              # django.core.management
+              django.setup()
+          h5 Configure settings
+          pre
+            code.hljs.python.
+              import django.conf.global_settings
+              import_module(os.environ["DJANGO_SETTINGS_MODULE"])
+          h5 Populate apps
+          pre
+            code.hljs.python.
+              for entry in settings.INSTALLED_APPS:
+                  cfg = AppConfig.create(entry)
+                  cfg.import_models()
+          aside.notes
+            p Django setup: initialize app configs, import app modules, import app models.
+            p App config uses import module.
+            p This happens #[b before] Django even knows what command to execute.
+        section
+          h3 Management command
+          pre
+            code.hljs.python.
+              # django.core.management
+              subcommand = sys.argv[1]
+              app_name = find(pkgutils.iter_modules(settings.INSTALLED_APPS))
+              module = import_module(
+                  '%s.management.commands.%s' % (app_name, subcommand)
+              )
+              cmd = module.Command()
+              cmd.run_from_argv(self.argv)
+        section
+          h3 Commands
+          pre
+            code.hljs.python.
+              # django.core.management.commands.runserver
+              naiveip_re = re.compile(r"""^(?:
+              (?P#{"<"}addr#{">"}
+                  (?P#{"<"}ipv4#{">"}\d{1,3}(?:\.\d{1,3}){3}) |         # IPv4 address
+                  (?P#{"<"}ipv6#{">"}\[[a-fA-F0-9:]+\]) |               # IPv6 address
+                  (?P#{"<"}fqdn#{">"}[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*) # FQDN
+              ):)?(?P#{"<"}port#{">"}\d+)$""", re.X)
+          aside.notes
+            p Everything in django was build from regular expressions and sticks.
+            p Sticks are metaclasses.
+        section
+          h3 Commands
+          pre
+            code.hljs.python.
+              # django.core.management.commands.runserver
+              class Command(BaseCommand):
+
+                  def handle(self, *args, **options):
+
+                      httpd = WSGIServer(*args, **options)
+                      handler = WSGIHandler()
+                      httpd.set_app(handler)
+                      httpd.serve_forever()
+          aside.notes
+            p #[b BaseCommand] does not do match.
+            p Mostly it parse sys.argv and call handle method.
+            p WSGI server is holding global instance of your app.
+        section
+          h3 WSGI Server
+          h2 ♲
+          aside.notes.
+            There is always an event loop somewhere.
+        section
+          img(src=require("./pics/garbage-reuse.png")).plain
+          aside.notes.
+            And this is a picture of the programmer giving him tasks.
+        section
+          h3 WSGI Handler
+          pre
+            code.hljs.python.
+              # django.core.handlers.wsgi
+              class WSGIHandler:
+
+                  def __call__(self, environ, start_response):
+
+                      signals.request_started.send()
+                      request = WSGIRequest(environ)
+                      response = self.get_response(request)
+                      start_response(response.status, response.headers)
+                      return response
+          aside.notes
+            p In addition to regular expressions Django was made from callbacks.
+            p Everything else is wrapper around this function.
+            p Environment is a dictionary containing HTTP request as string.
+            p POST body is a file description.
+        section
+          h3 What's going on
+          h5 Request
+          h5 Middlewares
+          h5 Routing
+          h5 View
+          h5 Form
+          h5 ORM
+          h5 Template
+          h5 Response
+        section
+          h3 Request
+          pre
+            code.hljs.python.
+              # django.core.handlers.wsgi
+              class WSGIRequest(HttpRequest):
+                  @cached_property
+                  def GET(self):
+                      return QueryDict(self.environ['QUERY_STRING'])
+
+                  @property
+                  def POST(self):
+                      self._load_post_and_files()
+                      return self._post
+
+                  @cached_property
+                  def COOKIES(self):
+                      return parse_cookie(self.environ['HTTP_COOKIE'])
+          aside.notes.
+            Contains HTTP request body, form and file upload handlers, methods to work with scheme.
+        section
+          h3 Middlewares
+          h5 Settings
+          pre
+            code.hljs.python.
+              # settings.py
+              MIDDLEWARE = [
+                  'django.middleware.security.SecurityMiddleware',
+                  'django.middleware.csrf.CsrfViewMiddleware',
+                  'django.contrib.sessions.middleware.SessionMiddleware',
+                  'django.contrib.auth.middleware.AuthenticationMiddleware',
+              ]
+          h5 Define
+          pre
+            code.hljs.python.
+              class Middleware:
+
+                  def __init__(self, get_response=None):
+                      self.get_response = get_response
+
+                  def __call__(self, request):
+                      return self.get_response(request)
+          aside.notes.
+            Joke about 7 circles of middlewares.
+            It's like function returning function.
+        section
+          h3 Middlewares
+          pre
+            code.hljs.python.
+              # django.core.handlers.base
+              def load_middleware(self):
+
+                  handler = convert_exception_to_response(self._get_response)
+                  for middleware_path in reversed(settings.MIDDLEWARE):
+                      middleware = import_string(middleware_path)
+                      instance = middleware(handler)
+                      handler = convert_exception_to_response(instance)
+                  self._middleware_chain = handler
+          h5 Apply
+          pre
+            code.hljs.python.
+              def get_response(self, request):
+
+                  set_urlconf(settings.ROOT_URLCONF)
+                  response = self._middleware_chain(request)
+                  return response
+          aside.notes
+            p It's like decorate every view function in your project with the same stack of decorators.
+            p Url conf is a thread local name of per request url config.
+            p Convert exception to response is a decorator casting HTTP404, permission errors and form parser errors to the proper HTTP responses.
+        section
+          h3 Routing
+          pre
+            code.hljs.python.
+              # django.core.handlers.base
+              def _get_response(self, request):
+
+                  resolver = get_resolver()
+                  view, args, kwargs = resolver.resolve(request.path_info)
+                  response = view(request, *args, **kwargs)
+                  return response
+          h5 Urls
+          pre
+            code.hljs.python.
+              # urls.py
+              urlpatterns = [
+                  path('articles/2003/', views.special_case_2003),
+                  path('articles/#{"<"}int:year#{">"}/', views.year_archive),
+                  path('articles/#{"<"}int:year#{">"}/#{"<"}int:month#{">"}/', views.month_archive)
+              ]
+        section
+          h3 Resolver
+          pre
+            code.hljs.python.
+              # django.urls.resolvers
+              _PATH_RE = re.compile(
+                  r'#{"<"}(?:(?P#{"<"}converter#{">"}[^#{">"}:]+):)?(?P#{"<"}parameter#{">"}\w+)#{">"}'
+              )
+
+              def resolve(self, path):
+                  for pattern in self.url_patterns:
+                      match = pattern.search(path)
+                      if match:
+                          return ResolverMatch(
+                              self.resolve(match[0])
+                          )
+                  raise Resolver404({'path': path})
+          aside.notes.
+            Resolver is a recursive method.
+        section
+          h5 View
+          pre
+            code.hljs.python.
+              # django.views.generic.edit
+              class ContactView(FormView):
+                  template_name = 'contact.html'
+                  form_class = ContactForm
+                  success_url = '/thanks/'
+          h5 Method flowchart
+          pre
+            code.hljs.python.
+               self.dispatch()
+               self.post()
+               self.get_form()
+               self.form_valid()
+               self.render_to_response()
+          aside.notes
+            p Class based views result into method in the routing.
+            p Before form instance creation request object will parse form data.
+        section
+          h5 Form
+          pre
+            code.
+              Content-Type: multipart/form-data;boundary="boundary"
+
+              --boundary
+              name="field1"
+
+              value1
+              --boundary
+              name="field2";
+
+              value2
+          h5 Parser
+          pre
+            code.hljs.python.
+              # django.http.multipartparser
+              self._post = QueryDict(mutable=True)
+              stream = LazyStream(ChunkIter(self._input_data))
+              for field, data in Parser(stream):
+                  self._post.append(field, force_text(data))
+          aside.notes
+            p ChunkIter is a chunk reader iterator.
+            p LazyStream is a file-like wrapper around iterator.
+            p Parser is iterator reading single chunk into the field object.
+            p Django Form will make datetime from the string.
+        section
+          h3 ORM
+          pre
+            code.hljs.python.
+              # models.py
+              Entry.objects.exclude(
+                  pub_date__gt=date(2005, 1, 3),
+                  headline='Hello',
+              )
+          h5 SQL
+          pre
+            code.hljs.sql.
+              SELECT * WHERE NOT (pub_date #{">"} '2005-1-3' AND headline = 'Hello')
+        section
+          h3 Queryset
+          pre
+            code.hljs.python.
+              # django.db.models.query
+              sql.Query(Entry).where.add(
+                  ~Q(
+                      Q(F('pub_date') #{">"} date(2005, 1, 3)) &
+                      Q(headline='Hello')
+                  )
+              )
+          h5 Compiler
+          pre
+            code.hljs.python.
+              # django.db.models.expressions
+              class Q(tree.Node):
+                  AND = 'AND'
+                  OR = 'OR'
+
+                  def as_sql(self, compiler, connection):
+                      return self.template % self.field.get_lookup('gt')
+          aside.notes.
+            We traverse tree of expressions.
+        section
+          h3 Output
+          pre
+            code.hljs.python.
+              #{">"}#{">"}#{">"} Q(headline='Hello')
+              # headline = 'Hello'
+              #{">"}#{">"}#{">"} F('pub_date')
+              # pub_date
+              #{">"}#{">"}#{">"} F('pub_date') #{">"} date(2005, 1, 3)
+              # pub_date #{">"} '2005-1-3'
+              #{">"}#{">"}#{">"} Q(...) & Q(...)
+              # ... AND ...
+              #{">"}#{">"}#{">"} ~Q(...)
+              # NOT ...
+        section
+          h3 DB routing
+          pre
+            code.hljs.python.
+              # django.db.utils
+              class ConnectionRouter:
+                  def db_for_read(self, model, **hints):
+                      if model._meta.app_label == 'auth':
+                          return 'auth_db'
+          h5 Connection pool
+          pre
+            code.hljs.python.
+              # django.db.backends.base.base
+              class BaseDatabaseWrapper:
+                  def commit(self):
+                      self.validate_thread_sharing()
+                      self.validate_no_atomic_block()
+                      with self.wrap_database_errors:
+                          return self.connection.commit()
+        section
+          h3 Template
+          pre
+            code.hljs.python.
+              from django.template.loader import render_to_string
+              render_to_string('my_template.html', {'entries': ...})
+          h5 Code
+          pre
+            code.hljs.django.
+              #{"<"}ul#{">"}
+              {% for entry in entries %}
+                  #{"<"}li#{">"}{{ entry.name }}#{"<"}/li#{">"}
+              {% endfor %}
+              #{"<"}/ul#{">"}
+        section
+          h3 Parser
+          pre
+            code.hljs.python.
+              # django.template.base
+              BLOCK_TAG_START = '{%'
+              BLOCK_TAG_END = '%}'
+              VARIABLE_TAG_START = '{{'
+              VARIABLE_TAG_END = '}}'
+              COMMENT_TAG_START = '{#'
+              COMMENT_TAG_END = '#}'
+
+              tag_re = (re.compile('(%s.*?%s|%s.*?%s|%s.*?%s)' %
+                        (re.escape(BLOCK_TAG_START),
+                         re.escape(BLOCK_TAG_END),
+                         re.escape(VARIABLE_TAG_START),
+                         re.escape(VARIABLE_TAG_END),
+                         re.escape(COMMENT_TAG_START),
+                         re.escape(COMMENT_TAG_END))))
+          aside.notes.
+            Surprise! It's a regexp.
+        section
+          h3 Lexer
+          pre
+            code.hljs.python.
+              # django.template.base
+              def tokenize(self):
+                  for bit in tag_re.split(template_string):
+                      lineno += bit.count('\n')
+                      yield bit
+          h5 Parser
+          pre
+            code.hljs.python.
+              def parse():
+                  while tokens:
+                      token = tokens.pop()
+                      if token.startswith(BLOCK_TAG_START):
+                          yield TagNode(token)
+                      elif token.startswith(VARIABLE_TAG_START):
+                          ...
+        section
+          h3 For loop
+          pre
+            code.hljs.python.
+              # django.template.defaulttags
+              @register.tag('for')
+              def do_for(parser, token):
+                  args = token.split_contents()
+                  body = parser.parse(until=['endfor'])
+                  return ForNode(args, body)
+          h5 For node
+          pre
+            code.hljs.python.
+              class ForNode(Node):
+                  def render(self, context):
+                       with context.push():
+                           for i in self.args:
+                               yield self.body.render(context)
+        section
+          h3 Response
+          img(src=require("./pics/result.png")).plain
+        section
+          h3 Understand your tools
+          h5 Do a better job
+        section
+          h2 The end

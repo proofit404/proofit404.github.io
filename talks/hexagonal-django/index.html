@@ -1,0 +1,594 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <link rel="stylesheet" type="text/css" href="reveal.css">
+        <link rel="stylesheet" type="text/css" href="white.css" id="theme">
+        <link rel="stylesheet" type="text/css" href="github.css">
+        <link rel="stylesheet" type="text/css" href="custom.css">
+        <title>Hexagonal Django Talk</title>
+    </head>
+    <body>
+        <div class="reveal">
+            <div class="slides">
+                <section>
+                    <h1>Hexagonal Django</h1>
+                    <h3>@proofit404</h3>
+                    <aside class="notes">
+                        Happy birthday
+                    </aside>
+                </section>
+                <section>
+                    <h1>Поговорим о коде</h1>
+                    <aside class="notes">
+                        PyconRU 2015, Адище
+                    </aside>
+                </section>
+                <section>
+                    <h1>Плохой код</h1>
+                    <aside class="notes">
+                        Мало кто может назвать конкретные претензии к коду
+                    </aside>
+                </section>
+                <section>
+                    <h1>Плохой код</h1>
+                    <h1>больно бьет</h1>
+                    <h1>по продакшену :(</h1>
+                </section>
+                <section>
+                    <h4>Кому-то было лень писать custom manager</h4>
+                    <pre style="box-shadow: none;">
+                        <code class="hljs">
+def make_report(request, pk):
+    request.GET = request.GET.copy()
+    request.GET['foo'] = 'bar'
+    response = another_report(request, pk)
+    return render(request, 'report.html',
+                  context=response.context_data)
+                        </code>
+                    </pre>
+                </section>
+                <section>
+                    <h4>А ещё положил логику в шаблоны,</h4>
+                    <h4>что ей там будет...</h4>
+                    <pre style="box-shadow: none;">
+                        <code class="hljs">
+{% for i, j, k in rows %}
+&lt;tr&gt;
+    &lt;td&gt;{{ i }}&lt;/td&gt;
+    &lt;td&gt;{{ j }}&lt;/td&gt;
+    &lt;td&gt;{{ i|add:j }}&lt;/td&gt;
+&lt;/tr&gt;
+{% endfor %}
+                        </code>
+                    </pre>
+                </section>
+                <section>
+                    <h4>И все вроде бы работает</h4>
+                    <table>
+                        <tr>
+                            <td style="text-align: center;">Customer</td>
+                            <td style="text-align: center;">Orders number</td>
+                            <td style="text-align: center;">In total</td>
+                        </tr>
+                        <tr>
+                            <td>Jane</td>
+                            <td style="text-align: right;">2</td>
+                            <td style="text-align: right;">120$</td>
+                        </tr>
+                        <tr>
+                            <td>Ted</td>
+                            <td style="text-align: right;">7</td>
+                            <td style="text-align: right;">3053$</td>
+                        </tr>
+                    </table>
+                </section>
+                <section>
+                    <h4>До первого изменения в another_report</h4>
+                    <table>
+                        <tr>
+                            <td style="text-align: center;">Customer</td>
+                            <td style="text-align: center;">Orders number</td>
+                            <td style="text-align: center;">In total</td>
+                        </tr>
+                        <tr>
+                            <td>Jane</td>
+                            <td style="text-align: right;">2</td>
+                            <td style="text-align: right;">-2453261524615246.0$</td>
+                        </tr>
+                        <tr>
+                            <td>Ted</td>
+                            <td style="text-align: right;">7</td>
+                            <td style="text-align: right;">-7502737247324375.0$</td>
+                        </tr>
+                    </table>
+                    <aside class="notes">
+                        Кто догадается какой костыль я вбил в make_report?
+                    </aside>
+                </section>
+                <section>
+                    <h1>Хрупкость</h1>
+                    Проект ломается в местах, несвязанных с вносимыми
+                    изменениями
+                    <aside class="notes">
+                        User.save сломал post_save signal
+                    </aside>
+                </section>
+                <section>
+                    <h1>Жесткость</h1>
+                    Необходимо вносить большое количество правок в
+                    различные части проекта даже для тривиальных задач
+                </section>
+                <section data-background="pics/dependencies.png" data-background-size="contain">
+                    <aside class="notes">
+                        Dependencies
+                    </aside>
+                </section>
+                <section data-background="pics/interfaces.jpg" data-background-size="contain">
+                    <aside class="notes">
+                        Interfaces
+                    </aside>
+                </section>
+                <section>
+                    <h2>Не все так просто</h2>
+                    <p>В зависимости от контекста код</p>
+                    <ul>
+                        <li>решает проблему</li>
+                        <li>сам становится проблемой</li>
+                    </ul>
+                    <aside class="notes">
+                        Успешность архитектуры - простота выполнения каждого тикета
+                    </aside>
+                </section>
+                <section>
+                    <h2>Код плохой, если при работе над ним чувствуешь себя вот так</h2>
+                </section>
+                <section data-background="pics/die-hard.jpg" data-background-size="contain">
+                    <aside class="notes">
+                        Вентиляционные шахты<br>
+                        Прыжки с горящих небоскрёбов
+                    </aside>
+                </section>
+                <section>
+                    <h2>Код хороший, если каждый тикет выглядит вот так</h2>
+                </section>
+                <section>
+                    <img src="pics/kenny-south-park.jpg" alt="Kenny" style="border: none; box-shadow: none;">
+                </section>
+                <section>
+                    <img src="pics/google-django-best-practices.png" alt="Django Best Practices" style="border: none; box-shadow: none;">
+                    <aside class="notes">
+                        Fat models, thin views
+                    </aside>
+                </section>
+                <section>
+                    <div style="float: left; width: 25%;">
+                        <h3>
+                            <a href="http://www.dabapps.com/who-we-are/#tom-christie" style="color: #A30000;" class="tom-christie">
+                                Tom Christie
+                            </a>
+                        </h3>
+                        <p>
+                            <img src="pics/tom-christie.jpg" alt="Tom Christie">
+                        </p>
+                    </div>
+                    <div style="float: right; width: 75%; margin: 0 auto;">
+                        <h3>
+                            <a href="http://www.dabapps.com/blog/django-models-and-encapsulation/" style="color: #A30000;" class="tom-christie">
+                                Django models, encapsulation and data integrity
+                            </a>
+                        </h3>
+                        <p>
+                            As codebases grow it becomes difficult to
+                            make any cast-iron guarantees that you
+                            really are enforcing application-level
+                            data integrity.
+                        </p>
+                    </div>
+                    <aside class="notes">
+                        View<br>
+                        can't assign to field<br>
+                        can't call save()<br>
+                        can't call model constructor<br>
+                        can't do bulk_update or bulk_create
+                    </aside>
+                </section>
+                <section>
+                    <h1>Архитектурные стили</h1>
+                    <aside class="notes">
+                        Архитектура - это части, их взаимодействие и ограничения<br>
+                        Корпускулярные и жесткие системы
+                    </aside>
+                </section>
+                <section>
+                    <h3>Pipeline architecture</h3>
+                    <img src="pics/pipeline.jpg" style="border: none; box-shadow: none;">
+                    <aside class="notes">
+                        Гомогенная<br>
+                        Взаимозаменяемость компонент<br>
+                        Нет проблемы роста<br>
+                        Microservices
+                    </aside>
+                </section>
+                <section>
+                    <h3>Layered architecture</h3>
+                    <img src="pics/onion.png" style="border: none; box-shadow: none;">
+                    <aside class="notes">
+                        Иерархическая<br>
+                        Пропуск слоев не допускается<br>
+                        Проблема роста<br>
+                        Слоёв не должно быть слишком много или мало
+                    </aside>
+                </section>
+                <section>
+                    <h4>MVC фреймворки хорошо подходят для CRUD приложений</h4>
+                    <pre style="box-shadow: none;">
+                        <code class="hljs">
+class PublisherList(ListView):
+    model = Publisher
+    context_object_name = 'publishers'
+
+class PublisherDetail(DetailView):
+    queryset = Publisher.objects.all()
+    context_object_name = 'publisher'
+                        </code>
+                    </pre>
+                    <aside class="notes">
+                        <b>Fat models</b> если что-то начинает толстеть -
+                        значит мы слишком многого от этого хотим<br>
+                        Каких слоев добавить в MVC?
+                    </aside>
+                </section>
+                <section>
+                    <h2>Гексагональная архитектура</h2>
+                    <small>Позволяет взаимодействовать с приложением как
+                    пользователю, так и программам, автоматическим
+                    тестам, скриптам пакетной обработки. Также
+                    позволяет приложению быть разработанным и
+                    оттестированным без каких-либо дополнительных
+                    устройств или баз данных.</small>
+                </section>
+                <section data-background="pics/the-hexagon.jpg" data-background-size="contain">
+                    <aside class="notes">
+                        <b>Domain</b> цена заказа<br>
+                        <b>Application</b> выбор шаблона нотификации<br>
+                        <b>Framework</b> реализация
+                    </aside>
+                </section>
+                <section data-background="pics/the-clean-architecture.jpg" data-background-size="contain">
+                    <aside class="notes">
+                        Чем глубже - тем абстрактнее<br>
+                        &#10137; Правило зависимостей<br>
+                        Между слоями существует строго определенный интерфейс
+                    </aside>
+                </section>
+                <section>
+                    <h3>Причём тут Django?</h3>
+                    <img src="pics/djangopony.png" style="border: none; box-shadow: none;">
+                </section>
+                <section>
+                    <h1>Entity</h1>
+                    <pre style="box-shadow: none;">
+                        <code class="hljs">
+class Order:
+
+    def calculate_price(self):
+
+        return sum(product.price for product in self.bucket)
+                        </code>
+                    </pre>
+                    <aside class="notes">
+                        Бизнес объекты и их взаимосвязи
+                    </aside>
+                </section>
+                <section>
+                    <h1>Use Case</h1>
+                    <pre style="box-shadow: none;">
+                        <code class="hljs">
+class Purchase(UseCase):
+
+    @boundary_method
+    def start(user_name, product_name):
+
+        user = self.get_user(user_name)
+        product = self.get_product(product_name)
+        if product.allowed_for(user):
+            self.success.ask_for_confirmation()
+        else:
+            self.failure.impossible_purchase()
+                        </code>
+                    </pre>
+                    <aside class="notes">
+                        <b>UseCase</b> показывает цель и скрывает детали<br>
+                        Про <b>web</b> вообще ничего не сказано<br>
+                        <b>success</b> и <b>failure</b> это presenters<br>
+                        <b>product.allowed_for</b> например проверяет возраст
+                    </aside>
+                </section>
+                <section>
+                    <h1>Use case</h1>
+                    <pre style="box-shadow: none;">
+                        <code class="hljs">
+def get_product(self, product_name):
+
+    try:
+        product = self.products.by_name(product_name)
+    except NotAvailable:
+        self.failure.product_not_available()
+    else:
+        return product
+                        </code>
+                    </pre>
+                    <aside class="notes">
+                        <b>products</b> это entity gateway<br>
+                        <b>NotAvailable</b> это исключение уровня приложения
+                    </aside>
+                </section>
+                <section>
+                    <h1>Entity Gateway</h1>
+                    <pre style="box-shadow: none;">
+                        <code class="hljs">
+class ProductGateway(Gateway):
+
+    @entity(Product)
+    def by_name(product_name):
+
+        raise NotImplementedError
+
+    def not_available_error():
+
+        raise NotAvailable
+                        </code>
+                    </pre>
+                    <aside class="notes">
+                        <b>not_available_error</b> не перезаписывается<br>
+                        Внутри <b>Gateway</b> обрабатывается декоратор <b>entity</b>
+                    </aside>
+                </section>
+                <section>
+                    <h1>Implementation</h1>
+                    <pre style="box-shadow: none;">
+                        <code class="hljs">
+class Products(ProductGateway):
+
+    def by_name(product_name):
+
+        product_row = ProductModel.objects.get(name=product_name)
+        if product_row.amount < 1:
+            self.not_available_error()
+        else:
+            return {'price': product_row.price}
+                        </code>
+                    </pre>
+                    <aside class="notes">
+                        <b>amount</b> это служебное поле<br>
+                        Instance модели не пересекает границу<br>
+                        Ограничения от Тома Кристи
+                    </aside>
+                </section>
+                <section>
+                    <h1>Presenters</h1>
+                    <pre style="box-shadow: none;">
+                        <code class="hljs">
+class Failure(Presenter):
+
+    def product_not_available(self):
+
+        return render_to_response('products/not_available.html')
+                        </code>
+                    </pre>
+                    <aside class="notes">
+                        restframework сюда же
+                    </aside>
+                </section>
+                <section>
+                    <h1>Boundaries</h1>
+                    <pre style="box-shadow: none;">
+                        <code class="hljs">
+class PurchaseBoundary(Boundary):
+
+    use_case = Purchase()
+    products = Products()
+    failure = Failure()
+                        </code>
+                    </pre>
+                    <aside class="notes">
+                        Делает dependencies injection<br>
+                        Делегирует attribute access для @boundary_method
+                    </aside>
+                </section>
+                <section>
+                    <h1>Controllers</h1>
+                    <pre style="box-shadow: none;">
+                        <code class="hljs">
+class PurchaseView(UseCaseView):
+
+    boundary = PurchaseBoundary()
+                        </code>
+                    </pre>
+                    <aside class="notes">
+                        Можно добавлять в routing<br>
+                        Делает из request.POST dict<br>
+                        Неважно пришел user из запроса или из auth middleware<br>
+                        Можно декорировать csrf
+                    </aside>
+                </section>
+                <section data-background="pics/minion.jpg" data-background-size="contain">
+                    <aside class="notes">
+                        Внешний слой не использует конструкторы внутреннего<br>
+                        Внешний слой не модифицирует объекты внутреннего<br>
+                        Границы слоев пересекают только данные<br>
+                        Dependencies injection для обратной связи
+                    </aside>
+                </section>
+                <section>
+                    <h1>Pros:</h1>
+                    <ul>
+                        <li>Сохраняется связь с доменной областью</li>
+                        <li>Изоляция зависимостей</li>
+                        <li>Очень быстрые тесты</li>
+                    </ul>
+                    <aside class="notes">
+                        Решается проблема входа в проект (newcomer читает redmine)<br>
+                        Отсутствие неявных связей (хрупкость и жесткость повержены)<br>
+                        Независимое тестирование (минимальные использование db и selenium)
+                    </aside>
+                </section>
+                <section>
+                    <h1>Cons:</h1>
+                    <ul>
+                        <li>Сложнее чем MVC для понимания</li>
+                        <li>Придется подумать, как использовать существующие инструменты</li>
+                    </ul>
+                    <aside class="notes">
+                        Хочешь сделать что-то?  Сделай это сам!
+                    </aside>
+                </section>
+                <section>
+                    <h1>Как начать в уже существующем проекте?</h1>
+                    <aside class="notes">
+                        Я вообще не верю в stop the world refactoring
+                    </aside>
+                </section>
+                <section>
+                    <h3>Reusable apps &#10137; Reusable hexagons</h3>
+                    <div style="margin: auto; width: 40%;">
+                        <div style="text-align: left; vertical-align: middle;">
+                            <img src="pics/folder-icon.png" style="border: none; box-shadow: none; max-height: 8%; max-width: 8%; float: left;">
+                            <b>app/</b>
+                        </div>
+                        <div style="margin: auto; width: 80%;">
+                            <div style="clear: left; text-align: left; vertical-align: middle;">
+                                <img src="pics/folder-icon.png" style="border: none; box-shadow: none; max-height: 10%; max-width: 10%; float: left;">
+                                <b>templates/</b>
+                            </div>
+                            <div style="clear: left; text-align: left; vertical-align: middle;">
+                                <img src="pics/folder-icon.png" style="border: none; box-shadow: none; max-height: 10%; max-width: 10%; float: left;">
+                                <b>templatetags/</b>
+                            </div>
+                            <div style="clear: left; text-align: left; vertical-align: middle;">
+                                <img src="pics/folder-icon.png" style="border: none; box-shadow: none; max-height: 10%; max-width: 10%; float: left;">
+                                <b>tests/</b>
+                            </div>
+                            <div style="clear: left; text-align: left; vertical-align: middle;">
+                                <img src="pics/python-source-icon.png" style="border: none; box-shadow: none; max-height: 10%; max-width: 10%; float: left;">
+                                <b>entities.py</b>
+                            </div>
+                            <div style="clear: left; text-align: left; vertical-align: middle;">
+                                <img src="pics/python-source-icon.png" style="border: none; box-shadow: none; max-height: 10%; max-width: 10%; float: left;">
+                                <b>persistence.py</b>
+                            </div>
+                            <div style="clear: left; text-align: left; vertical-align: middle;">
+                                <img src="pics/python-source-icon.png" style="border: none; box-shadow: none; max-height: 10%; max-width: 10%; float: left;">
+                                <b>presenters.py</b>
+                            </div>
+                            <div style="clear: left; text-align: left; vertical-align: middle;">
+                                <img src="pics/python-source-icon.png" style="border: none; box-shadow: none; max-height: 10%; max-width: 10%; float: left;">
+                                <b>use_cases.py</b>
+                            </div>
+                            <div style="clear: left; text-align: left; vertical-align: middle;">
+                                <img src="pics/python-source-icon.png" style="border: none; box-shadow: none; max-height: 10%; max-width: 10%; float: left;">
+                                <b>views.py</b>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                <section>
+                    <h3>Hexagonal layout</h3>
+                    <div style="margin: auto; width: 50%;">
+                        <div style="margin: auto; width: 80%;">
+                            <div style="clear: left; text-align: left; vertical-align: middle;">
+                                <img src="pics/folder-icon.png" style="border: none; box-shadow: none; max-height: 8%; max-width: 8%; float: left;">
+                                <b>business/</b>
+                            </div>
+                            <div style="margin: auto; width: 80%;">
+                                <div style="clear: left; text-align: left; vertical-align: middle;">
+                                    <img src="pics/folder-icon.png" style="border: none; box-shadow: none; max-height: 10%; max-width: 10%; float: left;">
+                                    <b>entities/</b>
+                                </div>
+                                <div style="margin: auto; width: 80%;">
+                                    <div style="clear: left; text-align: left; vertical-align: middle;">
+                                        <img src="pics/python-source-icon.png" style="border: none; box-shadow: none; max-height: 12%; max-width: 12%; float: left;">
+                                        <b>product .py</b>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="margin: auto; width: 80%;">
+                                <div style="clear: left; text-align: left; vertical-align: middle;">
+                                    <img src="pics/folder-icon.png" style="border: none; box-shadow: none; max-height: 10%; max-width: 10%; float: left;">
+                                    <b>use_cases/</b>
+                                </div>
+                                <div style="margin: auto; width: 80%;">
+                                    <div style="clear: left; text-align: left; vertical-align: middle;">
+                                        <img src="pics/python-source-icon.png" style="border: none; box-shadow: none; max-height: 12%; max-width: 12%; float: left;">
+                                        <b>purchase.py</b>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="margin: auto; width: 80%;">
+                            <div style="clear: left; text-align: left; vertical-align: middle;">
+                                <img src="pics/folder-icon.png" style="border: none; box-shadow: none; max-height: 8%; max-width: 8%; float: left;">
+                                <b>persistence/</b>
+                            </div>
+                        </div>
+                        <div style="margin: auto; width: 80%;">
+                            <div style="clear: left; text-align: left; vertical-align: middle;">
+                                <img src="pics/folder-icon.png" style="border: none; box-shadow: none; max-height: 8%; max-width: 8%; float: left;">
+                                <b>web/</b>
+                            </div>
+                            <div style="margin: auto; width: 80%;">
+                                <div style="clear: left; text-align: left; vertical-align: middle;">
+                                    <img src="pics/folder-icon.png" style="border: none; box-shadow: none; max-height: 10%; max-width: 10%; float: left;">
+                                    <b>templates/</b>
+                                </div>
+                                <div style="clear: left; text-align: left; vertical-align: middle;">
+                                    <img src="pics/folder-icon.png" style="border: none; box-shadow: none; max-height: 10%; max-width: 10%; float: left;">
+                                    <b>templatetags/</b>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="margin: auto; width: 80%;">
+                            <div style="clear: left; text-align: left; vertical-align: middle;">
+                                <img src="pics/folder-icon.png" style="border: none; box-shadow: none; max-height: 8%; max-width: 8%; float: left;">
+                                <b>api/</b>
+                            </div>
+                        </div>
+                    </div>
+                    <aside class="notes">
+                        Структура кода соответствует цели проекта
+                    </aside>
+                </section>
+                <section>
+                    <h1>Reading</h1>
+                    <ul>
+                        <li>Robert Martin. Architecture: The lost years</li>
+                        <li>Chris Fidao. Hexagonal Architecture</li>
+                        <li>Николай Рыжиков. Use Case Driven Development</li>
+                        <li>Кирилл Мокевнин. Ментальное программирование</li>
+                    </ul>
+                </section>
+                <section data-background="pics/holywar.jpg">
+                    <h1 style="color: white; background-color: black">
+                        Let the holy war begin!
+                    </h1>
+                </section>
+            </div>
+        </div>
+        <script type="text/javascript" src="head.min.js"></script>
+        <script type="text/javascript" src="reveal.js"></script>
+        <script type="text/javascript">
+         Reveal.initialize({
+             controls: true,
+             progres: true,
+             history: true,
+             senter: true,
+             transition: "slide",
+             dependencies: [
+                 { src: 'highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+                 { src: 'notes.js', async: true }
+             ]
+         });
+        </script>
+    </body>
+</html>

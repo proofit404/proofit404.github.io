@@ -1,0 +1,22 @@
+# -*- mode: shell-script; -*-
+
+for arg in "$@"
+do
+    case $arg in
+        --json)
+            export USE_JSON=t
+        ;;
+        --pickle)
+            export USE_PICKLE=t
+        ;;
+        --msgpack)
+            export USE_MSGPACK=t
+        ;;
+        --yaml)
+            export USE_YAML=t
+        ;;
+        --ack)
+            export USE_ACK=t
+        ;;
+    esac
+done

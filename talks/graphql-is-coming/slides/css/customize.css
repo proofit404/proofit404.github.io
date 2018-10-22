@@ -1,0 +1,49 @@
+.reveal section img {
+    border: 0;
+    box-shadow: none;
+    background-color: #F0F1EB;
+}
+.reveal section pre {
+    box-shadow: none;
+}
+
+.reveal section pre code {
+    font-size: 1.3em;
+    line-height: 1.1em;
+    background-color: #F0F1EB;
+    overflow-x: hidden;
+}
+
+.reveal section pre code.small {
+    font-size: 1.1em;
+}
+
+mark {
+    color: red;
+    background-color: #F0F1EB;
+}
+
+.logo {
+    width: auto;
+    height: 150px;
+}
+
+.reveal section .spacer {
+    padding-right: 125px;
+}
+
+.reveal section .graphene-text {
+    color: white;
+}
+
+.reveal section .graphene-bg {
+    background-color: #DB594C;
+}
+
+.reveal section .relay-text {
+    color: #F26B00;
+}
+
+.reveal section .relay-bg {
+    background-color: #3B3738;
+}

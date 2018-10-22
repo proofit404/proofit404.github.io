@@ -1,0 +1,62 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><link rel="stylesheet" type="text/css" href="css/reveal.css"><link rel="stylesheet" type="text/css" href="css/theme/white.css"><link rel="stylesheet" type="text/css" href="lib/css/github-gist.min.css"><link rel="stylesheet" type="text/css" href="css/customize.css"><title>HTTP/2</title><script>var link = document.createElement( 'link' );
+link.rel = 'stylesheet';
+link.type = 'text/css';
+link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+document.getElementsByTagName( 'head' )[0].appendChild( link );</script></head><body><div class="reveal"><div class="slides"><section><h1>HTTP/2</h1><h2>Artem Malyshev</h2><h3>@proofit404</h3></section><section><h2>Why?</h2><p>HTTP/1 is the power</p><p>running Internet</p><aside class="notes"><p>it's simle popular protocol</p></aside></section><section><h2>HTTP/1 problems</h2><ul><li>Designed over 20 years ago</li><li>6 RFC at that moment</li><li>Network inefficient</li><li>Text-based</li></ul><aside class="notes"><ul><li>complex (chunk encoding bug)</li><li>parsers memony usage</li><li>mostly open new tcp connection</li><li>Can't open too many connections at the same time</li><li>http pipelining not work</li><li>http cache not work</li></ul></aside></section><section><h2>But we like workarounds</h2><ul><li>Image sprites</li><li>Custom fonts</li><li>Inline resources</li><li>Resource concatenation</li><li>Domain sharding</li></ul><aside class="notes"><p>base64 images</p><p>JS bundles</p><p>different domains</p><p>CDN whole business</p></aside></section><section><h2>HTTP/2</h2><p>Replacement for how HTTP/1</p><p>is expressed “on the wire”</p></section><section><h2>History</h2><ul><li>Proposed Standard in December 2014</li><li>SPDY successor</li><li>Initially developed by Google</li></ul></section><section><h2>Principles</h2><ul><li>Binary protocol</li><li>Multiplexing</li><li>Prioritization</li><li>Flow control</li><li>Headers compression</li><li>Stream termination support</li><li>Server push</li></ul><aside class="notes"><p>Binary framing layer</p><p>Stream</p><p>HPACK</p></aside></section><section data-background="pics/caniuse.png" data-background-size="contain" data-background-color="#F2E8D5"><br></section><section><h2>Implementations</h2><p>Ace Aerys Akamai GHost Apache Tomcat http4s-blaze Brocade Traffic
+Manager Chatterbox Chromium libcurl Deuterium E2 Systems PATH Ericsson
+MSP F5 GFE H2O hpack http2dotnet HttpTwo httpbis hyper Shaka Jetty
+LiteSpeed Enterprise Microsoft Internet Explorer mod_h2 Mozilla
+Firefox Netty nghttp2 Radware node-http2 OkHttp River Sasazka
+second-transfer ShimmerCat SuaveIO Swoole Trusterd Twitter Undertow
+Vert.x WASD Warp Wireshark WKWebView cashpack proxygen firefly</p><aside class="notes"><p>nginx curl twitter google wireshark hyper</p></aside></section><section><img src="pics/hyper.png"></section><section><h2>Cory Benfield</h2><img class="face-photo photo-corner" src="pics/Cory.jpg"><aside class="notes"><p>Former HPE</p><p>Now Apple</p><p>requests, urllib3, hyper, pyopenssl</p><p>IETF’s HTTPBis Working Group</p></aside></section><section><h2>Generating TLS cert</h2><pre><code class="bash">openssl req -x509  \
+  -newkey rsa:4096 \
+  -days 365 -nodes \
+  -keyout key.pem  \
+  -out cert.pem</code></pre></section><section><h2>H2</h2><pre><code class="python">from h2.connection import H2Connection
+
+conn = H2Connection(client_side=False)
+conn.initiate_connection()
+sock.sendall(conn.data_to_send())
+
+data = sock.recv(65535)
+events = conn.receive_data(data)
+for event in events:
+    ...</code></pre></section><section><h2>Quart</h2><pre><code class="python">from quart import *
+
+app = Quart(__name__)
+
+@app.route('/')
+async def index():
+    result = await render_template('index.html')
+    response = await make_response(result)
+    response.push_promises.update([
+        url_for('static', 'bootstrap.min.css'),
+        url_for('static', 'bootstrap.min.js'),
+        url_for('static', 'jquery.min.js'),
+    ])
+    return response</code></pre></section><section><h2>twisted</h2><pre><code class="python">from twisted import *
+
+root = Resource()
+root.putChild(b'', File('index.html'))
+root.putChild(b'static', File('static'))
+site = server.Site(root)
+server = endpoints.serverFromString(
+    reactor,
+    "ssl:privateKey=key.pem:certKey=cert.pem",
+)
+server.listen(site)
+reactor.run()</code></pre></section><section><h2>mitmproxy</h2><img src="pics/mitmproxy.png"></section><section><img src="pics/django-channels.png"></section><section><h2>Running Daphne</h2><pre><code class="bash">daphne                 \
+  --ssl                \
+  --port=8000          \
+  --privateKey=key.pem \
+  --certKey=cert.pem   \
+  project.asgi:channel_layer</code></pre></section><section><h2>Django Admin</h2><img src="pics/channels-worked.png"></section><section><h2>True story</h2><img src="pics/standards.png"></section><section><h2>Resources</h2><ul><li><a href="https://http2.github.io/">http2.github.io</a></li><li><a href="https://github.com/python-hyper/hyper-h2">Hyper H2</a></li><li><a href="https://medium.com/python-pandemonium/how-to-serve-http-2-using-python-5e5bbd1e7ff1">How to serve http 2 using python</a></li><li><a href="https://www.youtube.com/watch?v=-yxQIRl6Qic">An overview of HTTP/2 with Daniel Sommermann</a></li></ul></section><section><h1>Questions?</h1></section></div></div><script src="lib/js/head.min.js"></script><script src="js/reveal.js"></script><script src="lib/js/highlight.min.js"></script><script>hljs.initHighlightingOnLoad();</script><script>Reveal.initialize({
+    controls: false,
+    progress: false,
+    slideNumber: true,
+    history: true,
+    transition: 'none',
+    dependencies: [
+        { src: 'plugin/notes/notes.js', async: true }
+    ]
+});</script></body></html>

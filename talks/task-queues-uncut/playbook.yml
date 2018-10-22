@@ -1,0 +1,62 @@
+- hosts: all
+  become: yes
+  tasks:
+    # Redis
+    - name: add redis mirror key
+      apt_key: url=https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x136221EE520DDFAF0A905689B9316A7BC7917B12
+    - name: add redis mirror
+      apt_repository: repo='deb http://ppa.launchpad.net/chris-lea/redis-server/ubuntu precise main'
+    - name: install redis
+      apt: name=redis-server=3:3.0.7-1chl1~precise1
+    - name: check if old redis server is running
+      stat: path=/etc/init.d/redis-server
+      register: redis_server
+    - name: stop old redis server
+      service: name=redis-server state=stopped enabled=no
+      when: redis_server.stat.exists
+    - name: remove old redis files
+      file: dest="{{ item }}" state=absent
+      with_items:
+        - /etc/redis/redis.conf
+        - /etc/init.d/redis-server
+        - /var/lib/redis/dump.rdb
+    - name: add config for each redis server
+      template: src=etc/redis.conf dest="/etc/redis/redis_{{ item }}.conf"
+      with_items:
+        - 6379
+        - 6380
+        - 6381
+      notify:
+        - restart redis instance
+    - name: create redis instance init scripts
+      template: src=etc/redis.init dest="/etc/init.d/redis-server-{{ item }}" mode=0755
+      with_items:
+        - 6379
+        - 6380
+        - 6381
+      notify:
+        - restart redis instance
+    # RabbitMQ
+    - name: download erlang runtime
+      get_url: url=https://packages.erlang-solutions.com/erlang-solutions_1.0_all.deb dest=/tmp
+    - name: install erlang runtime
+      apt: deb=/tmp/erlang-solutions_1.0_all.deb
+    - name: add rabbitmq mirror key
+      apt_key: url=http://www.rabbitmq.com/rabbitmq-signing-key-public.asc
+    - name: add rabbitmq mirror
+      apt_repository: repo='deb http://www.rabbitmq.com/debian/ testing main'
+    - name: install rabbitmq
+      apt: name=rabbitmq-server
+    - name: add rabbitmq vhost
+      rabbitmq_vhost: name=pyconru
+    - name: add rabbitmq user
+      rabbitmq_user: user=pyconru password=pyconru vhost=pyconru configure_priv=.* read_priv=.* write_priv=.* tags=administrator
+    - name: add rabbitmq management plugin
+      rabbitmq_plugin: names=rabbitmq_management
+  handlers:
+    - name: restart redis instance
+      service: name="redis-server-{{ item }}" enabled=yes state=restarted
+      with_items:
+        - 6379
+        - 6380
+        - 6381

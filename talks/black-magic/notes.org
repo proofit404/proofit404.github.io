@@ -1,0 +1,46 @@
+* descriptors and metaclasses
+** TODO django fields
+** TODO descriptors doesn't work if they were stored in the instance
+   This is the reason my dependency library works
+** DONE https://github.com/dabeaz/sly/blob/master/sly/lex.py
+   - What __prepare__ metaclass classmethod does?
+   - How they can propagate _ function into it?
+* traceback rewrite
+** jinja
+*** TODO run this example successfully
+    #+BEGIN_SRC python
+      try:
+          tb_set_next = _init_ugly_crap()
+      except:
+          pass
+      del _init_ugly_crap
+    #+END_SRC
+* frame access
+** DONE q
+** TODO logging
+   #+BEGIN_SRC python
+     class Logger:
+         def findCaller(self):
+             f = currentframe()
+             ...
+   #+END_SRC
+*** TODO Google *sys._getframe* argument
+*** Here is an alternative for it
+    #+BEGIN_SRC python
+      def currentframe():
+          """Return the frame object for the caller's stack frame."""
+          try:
+              raise Exception
+          except Exception:
+              return sys.exc_info()[2].tb_frame.f_back
+
+    #+END_SRC
+* bytecode
+** TODO inspect
+* codecs
+** TODO ruby like string interpolation
+** TODO react like python
+* ast and import hooks
+** TODO pytest
+*** assert rewrite
+*** import hooks

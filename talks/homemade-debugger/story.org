@@ -1,0 +1,75 @@
+* Story line
+** Introduction
+   - I'm independent developer, and I'm totally useless without debugger.
+   - I'm going to tell you a story about programmer Jimmy.
+** Prologue
+   - Jimmy writes programs in Python
+   - Jimmy uses print statements to debug his programs
+   - Jimmy friends uses C programming language
+   - There are a lot of debugging tools for C programming language
+   - For example, gdb, valgrind, etc.
+   - Jimmy lives in a world with where pdb and profile modules aren't
+     written yet.
+   - His friend making fun of Jimmy, because poor tooling kills
+     productivity.
+   - Jimmy decides to write this tools himself.
+** Chapter 1: Trace function.
+   - To write debugger we need a way to alter python bytecode
+     execution.
+   - To do that Jimmy needs to understand what bytecode actually is.
+     And how CPython actually execute it.
+   - Jimmy digs into "*.pyc" files sturcture.
+   - Jimmy digs into dis module.
+   - Jimmy digs into definitions of the code objects.
+   - Jimmy digs into definitions of the frame objects.
+     + Especially how globals and locals are stored.
+   - Jimmy digs into interpreter Tic definition.
+   - Jimmy digs into main loop execution.
+     + Probably with code examples in the C programming language.
+   - Jimmy implements set_trace function
+     + Detailed explanation how it changes main loop behavior.
+** Chapter 2: Pdb.
+   - Jimmy has program which fails constantly with some input.
+   - Jimmy writes usual Pdb functionality using set_trace.
+   - Jimmy digs into readline library.
+   - It includes pdb.set_trace and interactive commands.
+** Chapter 3: Postmortem.
+   - Jimmy has program which fails randomly after some unknown event.
+   - Jimmy doesn't know anymore where to put pdb.set_trace call.
+   - Jimmy needs the ability to jump into pdb right after exception
+     happens.
+   - Jimmy needs digs into definition of the exception (traceback)
+     object.
+   - Jimmy writes postmortem debugger hook
+** Chapter 4: Multiprocessing.
+   - Jimmy has even more complex situation.
+   - Multi-process program randomly loose connection to database.
+   - Jimmy decides to white improved debugger version (named Manhole
+     and Hunter).
+   - Jimmy digs into definitions of the fork and pty_fork.
+   - Jimmy digs into socat (telnet alternative)
+     + Mention readline from previous chapters.
+** Chapter 5: Convenience.
+   - Jimmy want nice autocompletion in the Pdb prompt.
+   - Jimmy digs into ipython introspection possibilities.
+   - Jimmy writes ipdb.
+** Chapter 6: Time travel.
+   - Jimmy start to use pypy interpreter.
+   - Jimmy digs into its tracer dump.
+   - Jimmy writes RevDB to travel backward in time.
+** Epilogue.
+   - Now Jimmy has awesome debugging tools and can solve issues easily
+     + I know lisp, meditation xkcd.
+   - Jimmy is really happy with this tools.
+     + Anti-gravity xkcd.
+   - Jimmy met Tommy.
+   - Tommy really like <another> programming language.
+   - <another> programming language doesn't have debugging tools.
+   - Instead of being a jerk, Jimmy decides to help Tommy.
+   - He gives him a list of useful links to read about python
+     internals and debuggers, so Tommy can find inspiration in this
+     topic.
+     + https://pymotw.com/2/sys/tracing.html
+     + http://cs263-technology-tutorial.readthedocs.io/en/latest/
+   - Jimmy hopes it was interesting journey and I ready to answer your
+     questions about this path.

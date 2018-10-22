@@ -1,0 +1,8 @@
+.face-photo {
+    width: auto;
+    height: 250px;
+}
+
+.photo-corner {
+    border-radius: 25px;
+}

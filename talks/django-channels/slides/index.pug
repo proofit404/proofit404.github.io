@@ -1,0 +1,492 @@
+doctype html
+html
+  head
+    meta(charset='utf-8')
+    link(rel='stylesheet' type='text/css' href='css/reveal.css')
+    link(rel='stylesheet' type='text/css' href='css/theme/white.css')
+    link(rel='stylesheet' type='text/css' href='lib/css/github-gist.min.css')
+    link(rel='stylesheet' type='text/css' href='css/customize.css')
+    title Django Channels
+    script.
+      var link = document.createElement( 'link' );
+      link.rel = 'stylesheet';
+      link.type = 'text/css';
+      link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+      document.getElementsByTagName( 'head' )[0].appendChild( link );
+  body
+    .reveal
+      .slides
+        section
+          h1 Django Channels
+          h2 Artem Malyshev
+          h3 @proofit404
+        section
+          h1 Bring Django
+          h1 to the async
+          h1 networking
+          aside.notes
+            p What is the problem?
+            p How it solves it?
+            p What it is supposed for?
+            p What it is #[b not] supposed for?
+        section
+          h3 but we are already there
+          ul
+            li twisted
+            li eventlet
+            li gevent
+            li tornado
+            li asyncio
+            li curio
+          aside.notes
+            p Why the hell yet another async framework?
+        section
+          h1 And django
+          h1 is sync in
+          h1 its core
+          aside.notes
+            p ORM by design
+            p Tons of apps written this way
+        section
+          h2 WSGI
+          pre
+            code.hljs.python.
+              def app(environ, callback):
+
+                  status, headers = '200 OK', []
+                  callback(status, headers)
+                  return ['Hello world!\n']
+          aside.notes
+            p Request - response
+            p Middlewares
+        section(data-background='pic/http11.png' data-background-size='contain')
+          br
+          aside.notes
+            p fire up django
+            p handle request
+            p return response
+            p wait
+        section
+          h3 OK, but it is
+          h1 2016
+          h2 dude
+          aside.notes
+            p user wants more
+        section
+          h2 Progressive Web Apps
+          ul
+            li interactive communication
+            li responsive design
+            li push notifications
+            li works offline
+        section(data-background='pic/http2.png' data-background-size='contain')
+          br
+          aside.notes
+            p accept request
+            p send #[b few] responses
+            p or #[b skip] response
+        section
+          h2 It's all different
+          h3 persistent
+          h3 stateful
+          h3 connections
+          aside.notes
+            p long-lived
+        section
+          img(src='pic/django-channels.png')
+          aside.notes
+            p This is the problem we solves
+            p No more one thread per one connection
+        section
+          img.face-photo.photo-corner(src='pic/andrewgodwin.jpg')
+          aside.notes
+            p machine gun
+            p south / migrations
+        section(data-background='pic/infrastructure.png' data-background-size='contain')
+          br
+          aside.notes
+            p daphne
+            p redis, ipc, memory
+        section
+          img.face-photo(src='pic/twisted.png')
+          img.face-photo(src='pic/redis.png')
+        section
+          h1 ASGI
+        section
+          h2 ASGI is
+          p a standard interface between
+          p.fragment network protocol servers
+          p.fragment and Python applications
+        section
+          h1 Channel
+        section
+          h2 Channel is
+          p an ordered,
+          p.fragment first-in first-out queue
+          p.fragment with message expiry
+          p.fragment and at-most-once delivery
+          p.fragment to only one listener at a time
+        section
+          h1 Consumers
+        section
+          h2 Accept websocket message
+          pre
+            code.hljs.python.
+              def ws_message(message):
+
+                  message.reply_channel.send({
+                      'text': message.content['text'],
+                  })
+          aside.notes
+            p It's like #[b view] function
+        section
+          h2 Routing
+          pre
+            code.hljs.python.
+              from channels.routing import route
+              from myapp.consumers import ws_message
+
+              channel_routing = [
+                  route('websocket.receive', ws_message),
+              ]
+          aside.notes
+            p there is many predefined channels
+            ul
+              li #[b http.*] for long polling
+              li #[b websockets.*]
+        section
+          h2 Settings
+          pre
+            code.hljs.python.
+              CHANNEL_LAYERS = {
+                  'default': {
+                      'BACKEND': 'asgiref.inmemory',
+                      'ROUTING': 'myproject.routing',
+                  },
+              }
+          aside.notes
+            p It is like #[b DBRouter]
+        section
+          h2 ASGI app
+          pre
+            code.hljs.python.
+              import os
+              from channels.asgi import get_channel_layer
+
+              os.environ.setdefault(
+                  'DJANGO_SETTINGS_MODULE',
+                  'myproject.settings',
+              )
+
+              channel_layer = get_channel_layer()
+        section
+          h2 Deploy
+          pre
+            code.hljs.bash.
+              $ gunicorn myproject.wsgi
+          pre
+            code.hljs.bash.
+              $ daphne myproject.asgi:channel_layer
+          pre
+            code.hljs.bash.
+              $ django-admin runworker
+        section
+          h1 Reply channel
+        section(data-background='pic/reply_channel.png' data-background-size='contain')
+          br
+          aside.notes
+            p Unique for client connection
+            p Stored in message
+        section
+          h1 Groups
+          aside.notes
+            p Implemented by layer
+        section
+          h2 Consumers
+          pre
+            code.hljs.python.
+              from channels import Group
+
+              def ws_connect(message):
+                  Group('chat').add(message.reply_channel)
+
+              def ws_disconnect(message):
+                  Group('chat').discard(message.reply_channel)
+
+              def ws_message(message):
+                  Group('chat').send({
+                      'text': message.content['text'],
+                  })
+        section
+          h2 Routing
+          pre
+            code.hljs.python.
+              from channels.routing import route
+              from myapp.consumers import *
+
+              channel_routing = [
+                  route('websocket.connect', ws_connect),
+                  route('websocket.disconnect', ws_disconnect),
+                  route('websocket.receive', ws_message),
+              ]
+        section
+          h1 Generic consumers
+        section
+          h2 Base consumer
+          pre
+            code.hljs.python.
+              from channels.generic import BaseConsumer
+
+              class MyConsumer(BaseConsumer):
+
+                  method_mapping = {
+                      'channel.name.here': 'method_name',
+                  }
+
+                  def method_name(self, message, **kwargs):
+                      pass
+        section
+          h2 Websocket consumer
+          pre
+            code.hljs.python.
+              from channels.generic import WebsocketConsumer
+
+              class MyConsumer(WebsocketConsumer):
+
+                  def connection_groups(self):
+                      return ['chat']
+
+                  def connect(self, message):
+                      pass
+
+                  def receive(self, text=None, bytes=None):
+                      self.send(text=text, bytes=bytes)
+          aside.notes
+            p #[b self.send] will send to the group
+            p #[b JSON] variant as well
+        section
+          h2 Routing
+          pre
+            code.hljs.python.
+              from channels import route_class
+              from myapp import consumers
+
+              channel_routing = [
+                  route_class(consumers.MyConsumer),
+              ]
+          aside.notes
+            p channels are taken from mapping
+        section
+          h1 Routing
+        section
+          h2 Filters
+          pre
+            code.hljs.js.
+              // app.js
+              s = new WebSocket('ws://localhost:8000/chat/')
+          pre
+            code.hljs.python.
+              # routing.py
+              route('websocket.connect', ws_connect,
+                    path=r'^/chat/$')
+          aside.notes
+            p filter can be:
+            ul
+              li #[b path] from uri
+              li #[b query_string] after ? on connect
+        section
+          h2 Includes
+          pre
+            code.hljs.python.
+              from channels import route, include
+
+              blog_routes = [
+                  route('websocket.connect', blog,
+                        path=r'^/stream/'),
+              ]
+
+              routing = [
+                  include(blog_routes, path=r'^/blog'),
+              ]
+        section
+          h1 Multiplexing
+        section
+          h2 Define mapping
+          pre
+            code.hljs.python.
+              from channels import WebsocketDemultiplexer
+
+              class Demultiplexer(WebsocketDemultiplexer):
+
+                  mapping = {
+                      'intval': 'binding.intval',
+                  }
+        section
+          h2 Routing
+          pre
+            code.hljs.python.
+              from channels import route_class, route
+              from .consumers import Demultiplexer, ws_message
+
+              channel_routing = [
+                  route_class(Demultiplexer, path='^/binding/'),
+                  route('binding.intval', ws_message),
+              ]
+        section
+          h2 Message Content
+          pre
+            code.hljs.json.
+              {
+                  "stream": "intval",
+                  "payload": {
+                      ...
+                  }
+              }
+          aside.notes
+            p Demultiplexer will execute consumer #[b inplace]
+        section
+          h1 Sessions
+        section
+          h2 Channel session
+          pre
+            code.hljs.python.
+              from channels.sessions import channel_session
+
+              @channel_session
+              def ws_connect(message):
+                  room = message.content['path']
+                  message.#[mark channel_session]['room'] = room
+                  Group('chat-%s' % room).add(
+                      message.reply_channel
+                  )
+          aside.notes
+            p Dict-like
+            p Same engine to store sessions
+            p Except signed cookies
+            p One session for one reply_channel
+        section
+          h2 HTTP session
+          pre
+            code.hljs.python.
+              from channels.sessions import http_session_user
+
+              @http_session_user
+              def ws_connect(message):
+                  message.#[mark http_session]['room'] = room
+                  if message.user.username:
+                      ...
+          aside.notes
+            p cookies if you run daphne for all http
+            p ?session_key connection param (JS)
+            p works only on connect
+        section
+          h1 Message order
+        section
+          h2 Enforce ordering
+          pre
+            code.hljs.python.
+              from channels.generic import WebsocketConsumer
+
+              class MyConsumer(WebsocketConsumer):
+
+                  http_user = True
+                  strict_ordering = False
+
+                  def connection_groups(self, **kwargs):
+                      return ['chat']
+          aside.notes
+            p decorators are here too
+        section
+          h1 Data binding
+        section
+          h2 Bind model
+          pre
+            code.hljs.python.
+              class IntegerValueBinding(WebsocketBinding):
+
+                  model = IntegerValue
+                  stream = 'intval'
+                  fields = ['name', 'value']
+
+                  def group_names(self, instance, action):
+                      return ['intval-updates']
+
+                  def has_permission(self, user, action, pk):
+                      return True
+        section
+          h1 Redis Layer
+        section
+          h2 Redis Layer
+          h3 Sinc on workers
+          h3.fragment Async on daphne
+          h3.fragment msgpack
+          h3.fragment sharding
+          aside.notes
+            p #[b recieve] technique like Celery or RQ
+            p #[b twisted] friendly with connection #[b pools]
+        section
+          h2 Channel implementation
+          pre
+            code.hljs.
+              >> SET "b6dc0dfce" "\x81\xa4text\xachello"
+              >> RPUSH "websocket.send!sGOpfny" "b6dc0dfce"
+              >> EXPIRE "b6dc0dfce" "60"
+              >> EXPIRE "websocket.send!sGOpfny" "61"
+        section
+          h2 Group implementation
+          pre
+            code.hljs.python.
+              >> type group:chat
+              zset
+              >> ZRANGE group:chat 0 1 WITHSCORES
+              1) "websocket.send!sGOpfny"
+              2) "1476199781.8159261"
+          aside.notes
+            p Group.send is lua script
+        section
+          h1 Problems
+        section
+          h1 Callback
+          h1 Hell
+          aside.notes
+            p Ask #[b Andrew] about alternatives
+        section
+          h1 Cool Sh*t
+        section
+          h1 Sharding
+          aside.notes
+            p WebSocket servers communicate together
+        section
+          h1 Celery
+        section
+          h1 channels
+          h1 is not a
+          h1 task queue
+        section
+          h2 channels can't
+          h3 retry
+          h3.fragment canvas
+          h3.fragment eta
+          aside.notes
+            p you can use it #[b with] celery
+        section
+          h1 Django
+          h2 for today's web
+        section
+          h1 Questions?
+    script(src='lib/js/head.min.js')
+    script(src='js/reveal.js')
+    script(src='lib/js/highlight.min.js')
+    script.
+      hljs.initHighlightingOnLoad();
+    script.
+      Reveal.initialize({
+          controls: false,
+          progress: false,
+          slideNumber: true,
+          history: true,
+          transition: 'none',
+          dependencies: [
+              { src: 'plugin/notes/notes.js', async: true }
+          ]
+      });

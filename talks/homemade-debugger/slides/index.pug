@@ -1,0 +1,291 @@
+doctype html
+html
+  head
+    meta(charset='utf-8')
+    link(rel='stylesheet' type='text/css' href='css/reveal.css')
+    link(rel='stylesheet' type='text/css' href='css/theme/white.css' id='theme')
+    link(rel='stylesheet' type='text/css' href='css/customize.css')
+    title Homemade debugger
+    script.
+      var link = document.createElement( 'link' );
+      link.rel = 'stylesheet';
+      link.type = 'text/css';
+      link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+      document.getElementsByTagName( 'head' )[0].appendChild( link );
+    <!--[if lt IE 9]>
+    script(src='lib/js/html5shiv.js')
+    <![endif]-->
+  body
+    .reveal
+      .slides
+        section
+          h2 Homemade debugger
+          h3 Artem Malyshev
+          h4 @proofit404
+        section
+          h2 I'm a proud member of the
+          h2 Django Channels
+          h2 maintenance team
+        section
+          h2 Jimmy's story
+        section
+          h3 Wow, Python is so cool!
+          h3 I'll write my next project in Python!
+          img(src='pic/pc.png').comics
+        section
+          h3 Lol, are you using print statements for debugging?!
+          img(src='pic/wtf.png').comics
+        section
+          h3 if only I could write debugger myself...
+          img(src='pic/fantasy.png').comics
+        section
+          h2 Chapter 1
+          h4 Inside a Python interpreter
+        section
+          h3 Source code
+          pre
+            code.
+              #[b def] foo(a, b):
+                  #[b return] a + b
+
+              #[b if] __name__ == '__main__':
+                  #[b print](foo(1, 2))
+        section
+          h3 Bytecode
+          pre
+            code.
+              # #[b python -m dis simple.py]
+                 0 LOAD_CONST        (#{"<"}code object foo#{">"})
+                ...
+                16 LOAD_NAME         (print)
+                18 LOAD_NAME         (foo)
+                20 LOAD_CONST        (1)
+                22 LOAD_CONST        (2)
+                24 CALL_FUNCTION
+                26 CALL_FUNCTION
+        section
+          h3 Frame evaluation
+          pre
+            code.
+              _PyEval_EvalFrame(#[b PyFrameObject] *f, #[b int] throwflag) {
+                   #[b switch] (opcode) {
+                        TARGET(CALL_FUNCTION) { #[b /* <- */]
+                             #[b PyObject] **sp, *res;
+                             res = call_function(&sp, oparg, NULL); #[b /* <- */]
+                             stack_pointer = sp;
+                             PUSH(res);
+                        }
+                   }
+              }
+        section
+          h3 Python 1.4 Changelog
+          img(src='pic/changelog.png').comics
+        section
+          h3 Trace function
+          pre
+            code.gray.
+              _PyEval_EvalFrame(#[b PyFrameObject] *f, #[b int] throwflag) {
+                   #[b switch] (opcode) {
+                        TARGET(CALL_FUNCTION) {
+                             #[b PyObject] **sp, *res;
+                             res = call_function(&sp, oparg, NULL);
+                             #[mark.black call_trace(tracefunc, frame);]
+                             #[mark.black JUMPTO(frame->f_lasti);]
+                             PUSH(res);
+                        }
+                  }
+              }
+        section
+          h3 Settrace event table
+          table
+            tr
+              td 'call'
+              td Before a function is executed.
+            tr
+              td 'line'
+              td Before a line is executed.
+            tr
+              td 'return'
+              td Before a function returns.
+            tr
+              td 'exception'
+              td After an exception occurs.
+        section
+          h2 Chapter 2
+          h4 Pdb implementation
+        section
+          h3 Setup debugger
+          pre
+            code.gray.
+              #[b def] foo(a, b):
+                  #[b return] a + b
+
+              #[b if] __name__ == '__main__':
+                  #[mark.black #[b import] mydbg; mydbg.set_trace()]
+                  #[b print](foo(1, 2))
+        section
+          h3 Naive usage
+          pre
+            code.
+              #[b import] sys                                   # #[b python simple.py]
+                                                                  call
+              #[b def] set_trace():                           ['f_back', 'f_code', 'f_locals']
+                  sys.settrace(dispatch)
+
+              #[b def] dispatch(frame, event, arg):
+                  #[b print](event)
+                  #[b print](#[b dir](frame))
+        section
+          h3 Nested calls
+          pre
+            code.gray.
+              #[b import] sys                                   #[mark.black # #[b python simple.py]]
+                                                                  #[mark.black call]
+              #[b def] set_trace():                           #[mark.black ['f_back', 'f_code', 'f_locals'#{"]"}]
+                  sys.settrace(dispatch)               #[mark.black line]
+                                                                  #[mark.black ['f_back', 'f_code', 'f_locals'#{"]"}]
+              #[b def] dispatch(frame, event, arg):
+                  #[b print](event)
+                  #[b print](#[b dir](frame))
+                  #[mark.black #[b return] dispatch]
+        section
+          h3 Print lines of code
+          pre
+            code.gray.
+              #[b import] sys                                       #[mark.black # #[b python simple.py]]
+              #[mark.black #[b import] linecache]                               #[mark.black #[b def] foo(a, b):]
+                                                                      #[mark.black #[b return] a + b]
+              #[b def] dispatch(frame, event, arg):       #[mark.black #[b return] a + b]
+                  #[mark.black line = linecache.getline(]
+                      #[mark.black frame.f_code.co_filename,]
+                      #[mark.black frame.f_lineno,]
+                  #[mark.black )]
+                  #[mark.black #[b print](line)]
+                  #[b return] dispatch
+        section
+          h3 Interactive prompt
+          pre
+            code.gray.
+                      frame.f_lineno,                      #[mark.black # #[b python simple.py]]
+                  )                                                #[mark.black #[b def] foo(a, b):]
+                  #[b print](line)                                  #[mark.black #[b (Mydbg)] foo]
+                  #[mark.black cmd = #[b True]]                               #[mark.black #{"<"}function foo at 0x7f153b#{">"}]
+                  #[mark.black #[b while] cmd:]                                  #[mark.black #[b (Mydbg)] b]
+                      #[mark.black cmd = #[b input]('(Mydbg) ')]           #[mark.black 2]
+                      #[mark.black run_cmd(cmd, frame)]             #[mark.black #[b (Mydbg)]]
+                  #[b return] dispatch                         #[mark.black #[b return] a + b]
+                                                                   #[mark.black #[b (Mydbg)]]
+              #[mark.black #[b def] run_cmd(cmd, frame):]
+                  #[mark.black #[b if] cmd #[b in] frame.f_locals:]
+                      #[mark.black #[b print](frame.f_locals[cmd#{"]"})]
+        section
+          h3 Commands
+          h4 next, step in, contunue
+          h4 up, down, where
+          h4 expression eval, post mortem
+        section
+          h2 Chapter 3
+          h4 Threads and Multiprocessing
+        section
+          h3 Things are way more interesting in the world of concurrency
+          img(src='pic/server.png').comics
+        section
+          h3 Problems
+          h4 Install tracer for all threads
+          h4 Acquire the GIL
+          h4 Reinstall tracer after fork
+          h4 Stdin is not available
+        section
+          h2 Chapter 4
+          h4 Coroutines and asyncio
+        section
+          h3 Generator based concurrency
+          pre
+            code.
+              #[b (Mydbg)] list
+                 1     #[b def] view():
+                2           mydbg.set_trace()
+                3  ->     cache = #[b yield] access_cache()
+                4           data = #[b yield] access_db()
+                5
+              #[b (Mydbg)] next
+              --Return--
+              #[b (Mydbg)] # Hello event loop internals :'(
+        section
+          h3 Coroutines based concurrency
+          pre
+            code.
+              #[b (Mydbg)] list
+                 1     #[b async def] view():
+                2           mydbg.set_trace()
+                3  ->     cache = #[b await] access_cache()
+                4           data = #[b await] access_db()
+                5
+              #[b (Mydbg)] next
+              -> data = #[b await] access_db()
+              #[b (Mydbg)]
+        section
+          h2 Chapter 5
+          h4 Smart Tracing
+        section
+          h3 What if you don't even know where to start
+          img(src='pic/reviewing.png').comics
+        section
+          h3 Something goes wrong
+          pre
+            code.
+              File "django/db/backends/utils.py", line 65, in execute
+                return self.cursor.execute(sql, params)
+              File "django/db/utils.py", line 94, in __exit__
+                six.reraise(dj_exc_type, dj_exc_value, traceback)
+              File "django/utils/six.py", line 685, in reraise
+                raise value.with_traceback(tb)
+              File "django/db/backends/utils.py", line 63, in execute
+                return self.cursor.execute(sql)
+              django.db.utils.DatabaseError: server closed the connection
+                    This probably means the server terminated abnormally
+                    before or while processing the request.
+        section
+          h3 Let's track it down
+          pre
+            code.
+              #[b from] hunter #[b import] trace, Q
+              #[b import] mydbg
+
+              trace(
+                  Q(
+                      module="django.db.utils",
+                      function="close",
+                      kind="call",
+                      action=mydbg.set_trace,
+                  )
+              )
+        section
+          h2 Chapter 6
+          h4 Many years later...
+        section
+          h3 A lot of cool tools were developed
+          img(src='pic/antigravity.png').comics
+        section
+          h4 ipdb, pdb++, winpdb
+          h4 BeeWare bugjar
+          h4 JetBrains PyCharm debugger
+          h4 GDB python extensions
+        section
+          h3 10x engineer path
+          img(src='pic/tenx.png').comics
+        section
+          h2 The End
+    script(src='lib/js/head.min.js')
+    script(src='js/reveal.js')
+    script.
+      Reveal.initialize({
+          controls: false,
+          progress: false,
+          slideNumber: true,
+          history: true,
+          transition: 'none',
+          dependencies: [
+              { src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } }
+          ]
+      });

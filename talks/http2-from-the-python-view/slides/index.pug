@@ -1,0 +1,211 @@
+doctype html
+html
+  head
+    meta(charset='utf-8')
+    link(rel='stylesheet' type='text/css' href='css/reveal.css')
+    link(rel='stylesheet' type='text/css' href='css/theme/white.css')
+    link(rel='stylesheet' type='text/css' href='lib/css/github-gist.min.css')
+    link(rel='stylesheet' type='text/css' href='css/customize.css')
+    title HTTP/2
+    script.
+      var link = document.createElement( 'link' );
+      link.rel = 'stylesheet';
+      link.type = 'text/css';
+      link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+      document.getElementsByTagName( 'head' )[0].appendChild( link );
+  body
+    .reveal
+      .slides
+        section
+          h1 HTTP/2
+          h2 Artem Malyshev
+          h3 @proofit404
+        section
+          h2 Why?
+          p HTTP/1 is the power
+          p running Internet
+          aside.notes
+            p it's simle popular protocol
+        section
+          h2 HTTP/1 problems
+          ul
+            li Designed over 20 years ago
+            li 6 RFC at that moment
+            li Network inefficient
+            li Text-based
+          aside.notes
+            ul
+              li complex (chunk encoding bug)
+              li parsers memony usage
+              li mostly open new tcp connection
+              li Can't open too many connections at the same time
+              li http pipelining not work
+              li http cache not work
+        section
+          h2 But we like workarounds
+          ul
+            li Image sprites
+            li Custom fonts
+            li Inline resources
+            li Resource concatenation
+            li Domain sharding
+          aside.notes
+            p base64 images
+            p JS bundles
+            p different domains
+            p CDN whole business
+        section
+          h2 HTTP/2
+          p Replacement for how HTTP/1
+          p is expressed “on the wire”
+        section
+          h2 History
+          ul
+            li Proposed Standard in December 2014
+            li SPDY successor
+            li Initially developed by Google
+        section
+          h2 Principles
+          ul
+            li Binary protocol
+            li Multiplexing
+            li Prioritization
+            li Flow control
+            li Headers compression
+            li Stream termination support
+            li Server push
+          aside.notes
+            p Binary framing layer
+            p Stream
+            p HPACK
+        section(data-background='pics/caniuse.png' data-background-size='contain' data-background-color='#F2E8D5')
+          br
+        section
+          h2 Implementations
+          p.
+            Ace Aerys Akamai GHost Apache Tomcat http4s-blaze Brocade Traffic
+            Manager Chatterbox Chromium libcurl Deuterium E2 Systems PATH Ericsson
+            MSP F5 GFE H2O hpack http2dotnet HttpTwo httpbis hyper Shaka Jetty
+            LiteSpeed Enterprise Microsoft Internet Explorer mod_h2 Mozilla
+            Firefox Netty nghttp2 Radware node-http2 OkHttp River Sasazka
+            second-transfer ShimmerCat SuaveIO Swoole Trusterd Twitter Undertow
+            Vert.x WASD Warp Wireshark WKWebView cashpack proxygen firefly
+          aside.notes
+            p nginx curl twitter google wireshark hyper
+        section
+          img(src='pics/hyper.png')
+        section
+          h2 Cory Benfield
+          img(src='pics/Cory.jpg').face-photo.photo-corner
+          aside.notes
+            p Former HPE
+            p Now Apple
+            p requests, urllib3, hyper, pyopenssl
+            p IETF’s HTTPBis Working Group
+        section
+          h2 Generating TLS cert
+          pre
+            code.bash.
+              openssl req -x509  \
+                -newkey rsa:4096 \
+                -days 365 -nodes \
+                -keyout key.pem  \
+                -out cert.pem
+        section
+          h2 H2
+          pre
+            code.python.
+              from h2.connection import H2Connection
+
+              conn = H2Connection(client_side=False)
+              conn.initiate_connection()
+              sock.sendall(conn.data_to_send())
+
+              data = sock.recv(65535)
+              events = conn.receive_data(data)
+              for event in events:
+                  ...
+        section
+          h2 Quart
+          pre
+            code.python.
+              from quart import *
+
+              app = Quart(__name__)
+
+              @app.route('/')
+              async def index():
+                  result = await render_template('index.html')
+                  response = await make_response(result)
+                  response.push_promises.update([
+                      url_for('static', 'bootstrap.min.css'),
+                      url_for('static', 'bootstrap.min.js'),
+                      url_for('static', 'jquery.min.js'),
+                  ])
+                  return response
+        section
+          h2 twisted
+          pre
+            code.python.
+              from twisted import *
+
+              root = Resource()
+              root.putChild(b'', File('index.html'))
+              root.putChild(b'static', File('static'))
+              site = server.Site(root)
+              server = endpoints.serverFromString(
+                  reactor,
+                  "ssl:privateKey=key.pem:certKey=cert.pem",
+              )
+              server.listen(site)
+              reactor.run()
+        section
+          h2 mitmproxy
+          img(src='pics/mitmproxy.png')
+        section
+          img(src='pics/django-channels.png')
+        section
+          h2 Running Daphne
+          pre
+            code.bash.
+              daphne                 \
+                --ssl                \
+                --port=8000          \
+                --privateKey=key.pem \
+                --certKey=cert.pem   \
+                project.asgi:channel_layer
+        section
+          h2 Django Admin
+          img(src='pics/channels-worked.png')
+        section
+          h2 True story
+          img(src='pics/standards.png')
+        section
+          h2 Resources
+          ul
+            li
+              a(href='https://http2.github.io/') http2.github.io
+            li
+              a(href='https://github.com/python-hyper/hyper-h2') Hyper H2
+            li
+              a(href='https://medium.com/python-pandemonium/how-to-serve-http-2-using-python-5e5bbd1e7ff1') How to serve http 2 using python
+            li
+              a(href='https://www.youtube.com/watch?v=-yxQIRl6Qic') An overview of HTTP/2 with Daniel Sommermann
+        section
+          h1 Questions?
+    script(src='lib/js/head.min.js')
+    script(src='js/reveal.js')
+    script(src='lib/js/highlight.min.js')
+    script.
+      hljs.initHighlightingOnLoad();
+    script.
+      Reveal.initialize({
+          controls: false,
+          progress: false,
+          slideNumber: true,
+          history: true,
+          transition: 'none',
+          dependencies: [
+              { src: 'plugin/notes/notes.js', async: true }
+          ]
+      });

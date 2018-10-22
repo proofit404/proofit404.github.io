@@ -1,0 +1,5 @@
+#!/bin/bash
+
+. ./_args
+
+USE_REDIS=t python submit.py

@@ -1,0 +1,5 @@
+#!/bin/bash
+
+. ./_args
+
+USE_RABBITMQ=t celery -A app worker -n rabbitmq_worker_$RANDOM

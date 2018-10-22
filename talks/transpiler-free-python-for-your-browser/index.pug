@@ -1,0 +1,212 @@
+doctype html
+html
+  head
+    meta(charset='utf-8')
+    link(rel='stylesheet' type='text/css' href='css/reveal.css')
+    link(rel='stylesheet' type='text/css' href='css/theme/serif.css')
+    link(rel='stylesheet' type='text/css' href='lib/css/github-gist.min.css')
+    link(rel='stylesheet' type='text/css' href='css/customize.css')
+    title The Right Bees
+    script.
+      var link = document.createElement( 'link' );
+      link.rel = 'stylesheet';
+      link.type = 'text/css';
+      link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+      document.getElementsByTagName( 'head' )[0].appendChild( link );
+  body
+    .reveal
+      .slides
+        section
+          img(src='pic/beeware-batavia.png')
+          h2 Transpiler free Python
+          h3 Artem Malyshev
+          h4 @proofit404
+        section
+          h1 Why?
+        section
+          h2 Syntax
+          h2 ; ` ( [
+        section
+          h3 Semantics
+          img(src='pic/WAT.png')
+        section
+          h2 Pythonic syntax sugar
+          aside.notes
+            p Scouping rules
+        section
+          h1 Opal
+          h3 Transpiler with semantic
+        section
+          h3 Transpiler with semantic
+          pre
+            code.hljs.ruby.
+              class User
+                def admin?
+                  @name == 'Admin'
+                end
+              end
+          pre
+            code.hljs.js.small.
+              (function(Opal) {
+                var self = Opal.top, $scope = Opal, $klass = Opal.klass;
+                Opal.add_stubs(['$==']);
+                return (function($base, $super) {
+                  function $User(){};
+                  var self = $User = $klass($base, $super, 'User', $User);
+                  var def = self.$$proto, $scope = self.$$scope, TMP_1;
+                  def.name = nil;
+                  return (Opal.defn(self, '$admin?', TMP_1 = function() {
+                    var self = this;
+                    return self.name['$==']("Admin");
+                  }, TMP_1.$$arity = 0), nil) && 'admin?'
+                })($scope.base, null)
+              })(Opal);
+        section
+          h1 Batavia
+          h3 Full runtime implementation
+        section
+          img.face-photo.photo-corner(src='pic/Russell.jpg')
+        section
+          h3 VM principles
+          ul
+            li Just a bytecode interpretter
+            li.fragment Marshal library implementation
+            li.fragment Code object constructor
+            li.fragment Minimal footprint
+        section
+          h3 Source code
+          pre
+            code.hljs.python.
+              foo(1, 2)
+          h3 Opcode
+          pre
+            code.
+              12 LOAD_NAME      0 (foo)
+              15 LOAD_CONST     2 (1)
+              18 LOAD_CONST     3 (2)
+              21 CALL_FUNCTION  2 (2 positional, 0 keyword)
+              24 POP_TOP
+        section
+          h3 Bytecode
+          pre
+            code.
+              7079 da03 6f01 0073 0200  x.py..foo....s..
+              0001 7205 00e9 0000 e902  ....r...........
+              004e 2901 0000 0100 0000  ...N).r....r....
+              0000 0072 0000 0000 00da  r....r....r.....
+              6d6f 6475 3e01 0073 0200  .<module>....s..
+        section
+          h1 Lets see what we can do
+        section
+          h4 Vue.js
+          pre
+            code.hljs.html.
+              #{"<"}div id="app"#{">"}
+                {{ message }}
+              #{"<"}/div#{">"}
+          pre
+            code.hljs.js.
+              var app = new Vue({
+                el: '#app',
+                data: {message: 'Hello Vue!'}
+              })
+        section
+          h4 Python VM in the browser
+          pre
+            code.hljs.python.
+              import dom
+
+              Vue = dom.window.self.Vue
+
+              class options:
+                  el = '#app'
+                  class data:
+                      message = 'Hello Vue!'
+
+              app = Vue(options)
+        section
+          h4 index.py
+          pre
+            code.hljs.bash.
+              python -m py_compile index.py
+              # -> index.pyc
+          h4 index.html
+          pre
+            code.hljs.html.
+              #{"<"}script src="batavia.js"#{">"}#{"<"}/script#{">"}
+              #{"<"}script id="batavia-index"#{">"}
+                Fg0NCnw5dVi7AAAA4wA...
+              #{"<"}/script#{">"}
+              #{"<"}script type="text/javascript"#{">"}
+               window.vm = new batavia.VirtualMachine({});
+               window.vm.run('index', []);
+              #{"<"}/script#{">"}
+        section
+          h4 I'm going to build my own React
+          h4 with Python and Codecs
+          pre
+            code.hljs.python.
+              # coding: pyxl
+              import dom
+              from pyxl import html
+
+              div = dom.document.getElementById('fill-me')
+              div.innerHTML = #[mark(style='font-weight: bold;') #{"<"}h1#{">"}]Hello World!#[mark(style='font-weight: bold;') #{"<"}/h1#{">"}]
+        section
+          h4 index.html
+          pre
+            code.hljs.html.
+              #{"<"}script src="batavia.js"#{">"}#{"<"}/script#{">"}
+              #{"<"}!-- Bandled PyXL library --#{">"}
+              #{"<"}script id="batavia-pyxl"#{">"}
+                Fg0NCgELfFgWAAAA4w...
+              #{"<"}/script#{">"}
+              #{"<"}script id="batavia-pyxl.html"#{">"}
+                Fg0NCtRLfFh6AAAA4w...
+              #{"<"}/script#{">"}
+              #{"<"}!-- Our index.py --#{">"}
+              #{"<"}script id="batavia-index"#{">"}
+                Fg0NCj8SfFiEAAAA4w...
+              #{"<"}/script#{">"}
+        section
+          h4 Replacing python import system with webpack
+          h6
+            i Because why not?
+          pre
+            code.hljs.js.
+              window.vm = new batavia.VirtualMachine({
+                loader: function(name) {
+                  var stdlibModule = batavia.stdlib[name];
+                  return {
+                    'bytecode': stdlibModule,
+                    'filename': new batavia.types.Str("#{"<"}input#{">"}")
+                  };
+                }
+              });
+              window.vm.run('index', []);
+          h4 Pure python implementation of the standard library
+          pre
+            code.hljs.js.
+              module.exports = 'Fg0NCuBMo1brAwAA4wAAAAAAAAA...'
+        section(data-background='pic/traceback.png' data-background-size='contain')
+          br
+        section
+          h2 pybee.org
+        section
+          h1 ?
+    script(src='lib/js/head.min.js')
+    script(src='js/reveal.js')
+    script(src='lib/js/highlight.min.js')
+    script.
+      hljs.initHighlightingOnLoad();
+    script.
+      Reveal.initialize({
+          controls: false,
+          progress: false,
+          slideNumber: true,
+          history: true,
+          transition: 'none',
+          dependencies: [
+              { src: 'plugin/notes/notes.js', async: true }
+          ]
+      });

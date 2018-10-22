@@ -1,0 +1,85 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>Channels 2.0</title><meta name="description" content="Django Channels 2.0 in depth overview"><meta name="author" content="Artem Malyshev"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><link rel="stylesheet" href="css/reveal.css"><link rel="stylesheet" href="css/theme/beige.css" id="theme"><link rel="stylesheet" href="lib/css/zenburn.css"><script>var link = document.createElement( 'link' );
+link.rel = 'stylesheet';
+link.type = 'text/css';
+link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+document.getElementsByTagName( 'head' )[0].appendChild( link );</script><!--[if lt IE 9]><script src="lib/js/html5shiv.js"></script><![endif]--><style>.reveal section img {
+    border: none;
+    box-shadow: none;
+}
+
+.reveal section pre {
+    box-shadow: none;
+}</style></head><body><div class="reveal"><div class="slides"><section><h1>Channels 2.0</h1><h2>Artem Malyshev</h2><h3>@proofit404</h3></section><section><h3>Channels 1.0</h3><p class="fragment">3 years old design</p><p class="fragment">no standard interface like WSGI</p><p class="fragment">push <i><b>everything</b></i> over network</p><p class="fragment">tricky deploy</p><p class="fragment">django session abuse</p></section><section><h3>3 years of experience</h3><p>800+ commits</p><p>450+ issues closed</p><p>100+ contributors</p><p>40+ releases</p><aside class="notes"><p>Official django project</p></aside></section><section><h3>No standard interface</h3><a href="https://www.python.org/dev/peps/pep-0333/">PEP 333</a><p>This wide variety of choices can be a problem for new Python users, because generally speaking, their choice of web framework will limit their choice of usable web servers, and vice versa.</p><aside class="notes"><p>Gunicorn -> Middlewares -> Django</p><p>Multiplexer logic needs to be implemented everywhere</p><p>Passing <b>reply channel</b> every where</p></aside></section><section><h3>Push everything over network</h3><blockquote><p>TBH, the main reason I like microservices is that I feel like my method calls are too fast and I’d prefer to throw in some latency.</p><p>Aaron Patterson (@tenderlove)</p><a href="https://twitter.com/tenderlove/status/573907559871971328?ref_src=twsrc%5Etfw">March 6, 2015</a></blockquote><aside class="notes"><p>Tons of handshaking request-response traffic</p><p>Scaling issues</p><p>Redis local channel layer</p></aside></section><section><h3>Tricky deploy</h3><img src="pic/messy.png"></section><section><h3>For hello world</h3><img src="pic/deploy1.png"><aside class="notes"><p>hello world</p></aside></section><section><h3>For chat</h3><img src="pic/deploy2.png"><aside class="notes"><p>backpressure / channels full issue</p><p>hardly managed throughput</p><p>minimum configuration is too complex</p></aside></section><section><h3>Session usage</h3><pre class="fragment"><code class="hljs python">@channel_session</code></pre><pre class="fragment"><code class="hljs python">@http_session</code></pre><pre class="fragment"><code class="hljs python">@channel_and_http_session</code></pre><pre class="fragment"><code class="hljs python">@channel_and_http_session_user_from_http</code></pre><pre class="fragment"><code class="hljs python">@enforce_ordering</code></pre><aside class="notes"><p>Latency</p><p>Single point of failure</p><p>Scaling issues</p><p>Used as distributed Lock</p></aside></section><section><h3>Groups issues</h3><p class="fragment">Mostly used wrong</p><p class="fragment">Exposed to user</p><p class="fragment">Too complex to be fully implemented</p><aside class="notes"><p>People want to check membership</p><p>Not used for broadcasting</p><p>Membership discard on last add time and message expiration</p></aside></section><section><h3>asgi redis issues</h3><p class="fragment">Incomplete groups support</p><p class="fragment">Daphne constantly pools redis</p><p class="fragment">Does not support transparent scale</p><aside class="notes"><p>WS cleanup mechanics does not work</p><p>People get costs on AWS</p><p>Consistent hash issues</p></aside></section><section><h3>asgi rabbitmq issue</h3><p class="fragment">Have <i><b>really</b></i> complex implementation</p><p class="fragment">Needs <i><b>really</b></i> careful production setup</p><p class="fragment">But fully compatible with ASGI spec</p><aside class="notes"><p>two eventloops in different threads</p><p>lock management in the thread unsafe library</p><p>production checklist is huge</p></aside></section><section><h3>Channels 1.0</h3><p>Too complex to show incoming message counter</p><img src="pic/envelop.png" style="height: 100px; width: 100px;"></section><section data-background="pic/uvicorn.png" data-background-size="contain"><br></section><section><h3>Actual requirements</h3><p class="fragment">Send to channel from everywhere</p><p class="fragment">Simultaneous usage of sync and async code</p><p class="fragment">React on websocket events on another machine</p><p class="fragment">Cross-socket and cross-process communication</p><aside class="notes"><p>To handle stateful long living connections in the sync code</p></aside></section><section><h3>Moving the line</h3><p class="fragment">Run workers and Daphne in the same process</p><p class="fragment">Store socket state locally</p><p class="fragment">Remove "send-to-layer" conventions</p><aside class="notes"><p>Use threadpool for interact between sync and async</p><p>In memory storage instead of session backend</p><p>Consumers instead of raw sockets</p></aside></section><section><h3>Hello world deploy</h3><img src="pic/deploy3.png"></section><section><h3>Chat deploy</h3><img src="pic/deploy4.png"><aside class="notes"><p>busy server will have much worth performance</p><p>we will randomly close websockets</p></aside></section><section><h3>Implementation</h3><p class="fragment">Sync <=> async bridge</p><p class="fragment">Twisted over asyncio</p><p class="fragment">Remove Python 2 support</p><p class="fragment">Consumers as first class citizens</p><p class="fragment">Routing is a consumer too</p><aside class="notes"><p>You can write async code in your Django project</p><p>Modern twisted for modern days</p><p>Django 2.0</p><p>Explicit abstractions like views</p><p>Routing is a complex dispatching consumer</p></aside></section><section><h3>Sync to async</h3><pre><code class="hljs python">class SyncToAsync:
+
+    threadpool = ThreadPoolExecutor()
+
+    def __init__(self, func):
+        self.func = func
+
+    async def __call__(self, *args, **kwargs):
+        loop = asyncio.get_event_loop()
+        future = loop.run_in_executor(
+            self.threadpool,
+            partial(self.func, *args, **kwargs),
+        )
+        return await asyncio.wait_for(future)</code></pre><aside class="notes"><p>Turn synchronous code into awaitable</p></aside></section><section><h3>Async to sync</h3><pre><code class="hljs python">class AsyncToSync:
+
+    def __init__(self, awaitable):
+        self.awaitable = awaitable
+
+    def __call__(self, *args, **kwargs):
+        call_result = Future()
+        event_loop.call_soon_threadsafe(
+            asyncio.ensure_future,
+            wrap(self.awaitable args, kwargs),
+        )
+        call_result.result()</code></pre><aside class="notes"><p>Turn awaitable into synchronous code</p></aside></section><section><h3>Modern Twisted</h3><pre><code class="hljs python">@router.route("/gethostbyname/&lt;name&gt;")
+async def hostname(self, request: IRequest) -> IResponse:
+    try:
+        address = await getHostName()
+    except DNSNameError:
+        request.setResponseCode(http.NOT_FOUND)
+        return "no such host"
+    except DNSLookupError:
+        request.setResponseCode(http.NOT_FOUND)
+        return "lookup error"
+    return address</code></pre></section><section><h3>Consumers</h3><pre><code class="hljs python">class AsyncChatConsumer(AsyncConsumer):
+
+    async def websocket_connect(self, message):
+
+        await self.send({
+            "type": "websocket.accept",
+        })
+
+        self.username = "Anonymous"
+
+        await self.send({
+            "type": "websocket.send",
+            "text": "[Welcome %s!]" % self.username,
+        })</code></pre><aside class="notes"><p>You can await from Django ORM now!</p></aside></section><section><h3>Routing</h3><pre><code class="hljs python">application = ProtocolTypeRouter({
+    "http": URLRouter([
+        url("^", DjangoViewSystem),
+    ]),
+    "websocket": URLRouter([
+        url("^chat/$", AsyncChatConsumer),
+    ]),
+    "mqtt": MqttTemperatureConsumer,
+    "email": EmailToRouter([
+        regex("@support.org", SupportTicketHandler),
+    ]),
+    "sms": SMSFromRouter([
+        phone("+1", USTextHandler),
+    ]),
+})</code></pre><aside class="notes"><p>SMS reply codes or whatever you want</p></aside></section><section><h3>Results</h3><p class="fragment">Removes a lot of handshaking traffic</p><p class="fragment">Groups are be hidden in the consumer</p><p class="fragment">First steps to async Django</p><aside class="notes"><p>No need for redis local channel implementation</p><p>Broadcasting usage only</p></aside></section><section><h3>Links</h3><a href="http://channels.readthedocs.io/en/2.0/">Channels 2.0 Docs</a><br><a href="http://www.aeracode.org/2017/07/11/towards-channels-20/">Towards Channels 2.0</a><br><a href="http://www.aeracode.org/2017/10/18/channels-2-october/">Channels 2: October</a><br><a href="http://www.uvicorn.org/">Uvicorn: The lightning-fast asyncio server.</a></section><section><h3>To be continued</h3></section></div></div><script src="lib/js/head.min.js"></script><script src="js/reveal.js"></script><script>Reveal.initialize({
+    controls: false,
+    progress: false,
+    slideNumber: true,
+    history: true,
+    center: true,
+    transition: 'none',
+    dependencies: [
+        { src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+        { src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+        { src: 'plugin/notes/notes.js', async: true }
+    ]
+});</script></body></html>

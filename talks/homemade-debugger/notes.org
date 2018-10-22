@@ -1,0 +1,59 @@
+* I need to talk about
+** Trace mode
+** postmortem mode
+** -c continue mode
+* TODO How the hell "up" and "down" and "!" works?!
+* TODO What the hell is "debug" and "jump"?
+* TODO How "interact" command was implemented?
+* TODO Main implementation principle
+** set_trace implementation
+*** what does "frame.f_trace = self.trace_dispatch" mean?
+*** sys.settrace implementation
+* TODO How commands were implemented
+** How "next" command works?
+** How "until" command works?
+** How "return" command works?
+** How "list" command works?
+** How "w" command works?
+   self.get_stack walks from current frame by link f.f_back collecting
+   all frames up until bottom frame.
+** How "continue" to next breakpoint works
+   If there is no breakpoints any more "set_continue" just call
+   sys.settrace(None) which means normal execution.
+* TODO What is linecache module?
+* TODO What is postmortem?
+** Does it operate on traceback somehow?
+** Does it work if traceback was affected like in Jinja2
+* TODO How generators and coroutines go inside?
+** tornado "yield" example
+** asyncio "yield from" and "await" example
+* Style notes
+** We form this as XKCD styled story
+** With each chapter our character becomes older and beardy
+** Moral
+   At the beginning of the story our young programmer without debugger
+   was derided by old beardy C programmer, how have Gdb.  At the last
+   slide our grown up old Python programmer comes to the next <no name
+   lang> programmer to show how cool Pdb is and this fresh <no name
+   lang> isn't cool because of missed debugger.
+* TODO How to work with Threads and multiprocessing?
+* TODO How inspect module is used here?
+** How inspect.findsource works?
+* TODO What is about ": " prompt?
+* TODO How can I skip execution to the end of huge dict literal
+  Does until do this?
+* Set trace
+  Looks like trace function doesn't applies to the nested function
+  calls.  We need to return "local" trace function (or nested tracer)
+  explicitly.
+
+  Does trace function corresponds to the scoping rules in python?
+  Describe what is scoping in python, when we speak about locals.
+* TODO What is threading.set_trace function?
+* TODO exceptions inside the trace function
+* TODO what "function call" actually is?
+* TODO Draw virtual machine state in the pictures
+* TODO How to ignore function calls inside trace function itself?
+  Otherwise we will trace tracer itself.  What a recursive world.
+* TODO Structure of the frame object
+* TODO Describe the difference between tracers and profilers

@@ -1,0 +1,12 @@
+.double-face {
+    width: auto;
+    height: 250px;
+}
+
+.face-corner {
+    border-radius: 25px;
+}
+
+.contact-icon {
+    height: 150px;
+}

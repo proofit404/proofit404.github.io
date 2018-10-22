@@ -1,0 +1,19 @@
+* TODO *asgiref.applications*
+  - *functools.wraps* for module
+* TODO *asgiref.consumers*
+  - separate errors for missing consumer and consumer isn't a callable
+* TODO *daphne.endpoints*
+  - what does *x.strip('[]') means?
+* TODO *daphne.http*
+  - self.application_queue = None and
+    self.application_queue.put_nowait calls may cause NoneType errors
+  - why the hell we need lots of *if self.application_queue*?
+* TODO *daphne.server*
+  - why the hell application checker uses *for .. in list(...items())* ?
+* TODO *daphne.ws_protocol*
+  - if we use asyncio everywhere, why the hell we have *if six.PY2* calls?
+* TODO Ideas
+** is it possible to make apistar-style DI for channels?
+* TODO live server test case
+  - check compatibility with channels 2.0
+  - why the hell base channel layer moved to the channels paga?

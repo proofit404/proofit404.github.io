@@ -1,0 +1,65 @@
+* h2 and twisted demonstration
+  https://www.youtube.com/watch?v=Jm_o81n6qYA
+** h2
+   Hyper-h2 is a framework independent library
+** twisted support
+   You can easily run static site over twisted web server with http/2
+   support.  You write the same command as you do with python -m
+   http.server but for twisted.
+** firefox support
+   You can access this site on local host over http/2 from your browser
+** mitmproxy support
+   https://github.com/mitmproxy/mitmproxy is a developer tool capable
+   to intercept http/2 requests.  It's written in python and built on
+   top of h2 library.
+** curl support
+   Curl now have --http2 flag.
+*** DONE how it works?
+* other tools support
+** DONE aiohttp
+** DONE tornado
+* DONE Django channels
+* PyCon UK 2014: HTTP/2: Because The Web Was Too Easy
+  https://www.youtube.com/watch?v=IpwOiucVlIo
+** HTTP/1.1 floss
+   - HTTP now have 6 RFC, but still looks quiet simple.
+   - Transfer chunk encoding is the most popular issue in http 1
+     servers and clients.
+   - HTTP 1 is slow (mostly it will open new TCP connection).
+   - HTTP pipelining doesn't work either (even browsers can't
+     implement it correctly)
+   - Lots of workarounds like spiriting, inlining (base64 - who needs
+     compression efficiency :) and resource concatenation, sharding
+     (CSS on different domains).  All this fucks up caching.  CDN
+     business runs mostly on the existence of this problem.
+** HTTP/2
+   - The SPDY by google.
+   - HTTP/2 is a binary protocol.
+     *HTTP/2 in its core a binary framing layer for HTTP/1*.
+   - Multiplexing with priority and flow control.
+   - Header compression.
+   - Early stream termination.
+   - Server push.
+   - Focus on browsers :(
+   - Crazy control flow diagram picture.
+* Cory Benfield - Hyperactive: HTTP/2 and Python - PyCon 2015
+  https://www.youtube.com/watch?v=ACXVyvm5eTc
+  - text protocols are really tricky to parse
+  - HTTP/2 is fucking stateful nightmare :(
+  - HTTP/1 vs HTTP/2 gopher download image contest
+  - http2bin.org
+  - server push may be implemented for nghttp2 with extra headers
+* TODO An overview of HTTP/2 with Daniel Sommermann (Sourcegraph Hacker Meetup)
+  https://www.youtube.com/watch?v=-yxQIRl6Qic&t=6
+* DONE Sites who use it
+* DONE Cory Benfield
+  Former HPE, now Apple.  Member of IETF HTTPBis Working group.
+  - https://avatars2.githubusercontent.com/u/1382556?s=400&v=4
+  - https://lukasa.co.uk/
+* DONE XKCD
+  "We have 14 incomplete protocols now" at the end of the slides.
+* DONE How to serve HTTP/2 using Python
+  https://medium.com/python-pandemonium/how-to-serve-http-2-using-python-5e5bbd1e7ff1
+* TODO txacme for lets encrypt and Daphne
+* DONE SPDY
+* DONE caniuse

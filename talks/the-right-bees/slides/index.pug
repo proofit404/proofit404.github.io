@@ -1,0 +1,381 @@
+doctype html
+html
+  head
+    meta(charset='utf-8')
+    link(rel='stylesheet' type='text/css' href='css/reveal.css')
+    link(rel='stylesheet' type='text/css' href='css/theme/serif.css')
+    link(rel='stylesheet' type='text/css' href='lib/css/github-gist.min.css')
+    link(rel='stylesheet' type='text/css' href='css/customize.css')
+    title The Right Bees
+    script.
+      var link = document.createElement( 'link' );
+      link.rel = 'stylesheet';
+      link.type = 'text/css';
+      link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+      document.getElementsByTagName( 'head' )[0].appendChild( link );
+  body
+    .reveal
+      .slides
+        section
+          img(src='pic/brutus-270.png')
+          h2 The Right Bees
+          h3 Artem Malyshev
+          h4 @proofit404
+        section(data-background-color='#FFFFFF')
+          img(src='pic/django-channels.png')
+        section
+          img.face-photo.photo-corner(src='pic/Russell.jpg')
+        section
+          .container
+            div
+              img(src='pic/bugjar-logo.png')
+            div
+              h6 Bugjar
+          .container
+            div
+              img(src='pic/cricket-logo.png')
+            div
+              h6 Cricket
+          .container
+            div
+              img(src='pic/duvet-logo.png')
+            div
+              h6 Duvet
+          .container
+            div
+              img(src='pic/galley-logo.png')
+            div
+              h6 Galley
+        section(data-background='pic/bugjar.png' data-background-size='contain')
+          br
+        section(data-background='pic/cricket.png' data-background-size='contain')
+          br
+        section(data-background='pic/duvet.png' data-background-size='contain')
+          br
+        section(data-background='pic/galley.png' data-background-size='contain')
+          br
+        section(data-background='pic/blood-tears.jpg' data-background-size='contain')
+          br
+        section
+          .container
+            div
+              img(src='pic/toga-logo.png')
+            div
+              h6 Toga
+          .container
+            div
+              img(src='pic/rubicon-logo.png')
+            div
+              h6 Rubicon
+          .container
+            div
+              img(src='pic/voc-logo.png')
+            div
+              h6 Voc
+          .container
+            div
+              img(src='pic/batavia-logo.png')
+            div
+              h6 Batavia
+        section
+          h1 Toga
+        section
+          h4 One button app
+          pre
+            code.hljs.python.
+              def button_handler(widget):
+                  print("hello")
+
+              def build(app):
+                  box = toga.Box()
+                  button = toga.Button('Hello world',
+                                       on_press=button_handler)
+                  button.style.set(margin=50)
+
+              app = toga.App('Try App', startup=build)
+              app.main_loop()
+        section
+          img(src='pic/First-App.png')
+        section
+          h4 Platforms
+          ul
+            li toga-gtk, toga-cocoa, toga-win32
+            li environment markers
+            li import hooks
+            li platform bootstrap
+        section
+          h4 Colosseum
+          pre
+            code.hljs.python.
+              from colosseum import CSS, ROW
+
+              style = CSS(width=1000, height=1000,
+                          flex_direction=ROW)
+
+              style.layout
+          h4 Interface
+          ul
+            li foo.parent
+            li foo.children
+            li foo.style
+        section
+          h4 Problems
+          ul
+            li Hand written hierarchy
+            li Inline CSS
+        section
+          h4 index.jade
+          pre
+            code.hljs.pug.
+              Box
+                Button(label="Hello world", style="margin: 50",
+                       on_press=button_handler)
+          h4 app.py
+          pre
+            code.hljs.python.
+              import colosseum
+              import pyjade
+              import toga
+
+              index = open('index.jade').read()
+              ast = pyjade.Parser(index).parse()
+
+              def build(nodes, parent=None):
+                  ...
+              app = toga.App('App Jade', startup=build())
+        section
+          h3 Apple Python Support
+          h5 Create XCode Framework from Python distribution
+        section
+          h1 Rubicon
+        section
+          h4 Objective-C
+          pre
+            code.hljs.objc.
+              NSAutoreleasePool *pool = [
+                  [NSAutoreleasePool alloc]
+                init];
+          h4 Pure C
+          pre
+            code.hljs.c.
+              #include #{"<"}CoreFoundation/CoreFoundation.h#{">"}
+              #include #{"<"}objc/runtime.h#{">"}
+              #include #{"<"}objc/message.h#{">"}
+
+              id pool = objc_msgSend(
+                  objc_msgSend(
+                      objc_getClass("NSAutoreleasePool"),
+                      sel_registerName("alloc")),
+                  sel_registerName("init"));
+        section
+          h4 Pure Python
+          pre
+            code.hljs.python.
+              from rubicon.objc import ObjCClass, objc_method
+
+              NSAutoreleasePool = ObjCClass("NSAutoreleasePool")
+
+              pool = NSAutoreleasePool.alloc().init()
+
+              class MyPool(NSAutoreleasePool):
+                  @objc_method
+                  def foo(self, bar: int) -#{">"} None:
+                      pass
+        section
+          h4 Implementation
+          ul
+            li Use ctypes to talk with FFI
+            li Used in toga-cocoa and toga-ios
+            li Can expose python methods to the Obj-C runtime
+        section
+          h1 Voc
+        section
+          h4 Python to Java bytecode transpiler
+          pre
+            code.hljs.bash.
+              $ voc -v example.py
+          h4 Run java class
+          pre
+            code.hljs.bash.
+              java -classpath python-java-support.jar:. #{"\\"}
+                  python.example.__init__
+        section
+          h3 Source code
+          pre
+            code.hljs.python.
+              foo(1, 2)
+          h3 Opcode
+          pre
+            code.
+              12 LOAD_NAME      0 (foo)
+              15 LOAD_CONST     2 (1)
+              18 LOAD_CONST     3 (2)
+              21 CALL_FUNCTION  2 (2 positional, 0 keyword)
+              24 POP_TOP
+        section
+          h3 Bytecode
+          pre
+            code.
+              7079 da03 6f01 0073 0200  x.py..foo....s..
+              0001 7205 00e9 0000 e902  ....r...........
+              004e 2901 0000 0100 0000  ...N).r....r....
+              0000 0072 0000 0000 00da  r....r....r.....
+              6d6f 6475 3e01 0073 0200  .<module>....s..
+        section
+          h4 Implementation
+          ul
+            li Modules packed as java classes
+            li loadClass, getMethod, reflection and friends
+            li Traceback to the android.util.Log
+        section
+          h5 java -classpath python-java-support.jar:. python.example.__init__
+          pre
+            code.small.
+              Exception in thread "main" ZeroDivisionError: division by zero
+                at org.python.types.Int.__truediv__(Int.java:285)
+                at python.example.example$invoke$z.invoke(example.py:7)
+                at org.python.types.Function.invoke(Function.java:390)
+                at python.example.example$x$y.invoke(example.py:9)
+                at python.example.__init__.x(example.py:11)
+                at python.example.__init__.module$import(example.py:14)
+                at python.example.__init__.main(example.py)
+        section
+          h4 Java part
+          pre
+            code.hljs.java.small.
+              public class Generator extends org.python.types.Object
+                implements org.python.Iterable {
+                  @org.python.Method(__doc__ = "Return repr(self).")
+                  public org.python.Object __repr__() {
+                      return new org.python.types.Str(
+                        String.format("<%s object (%s) at 0x%x>",
+                                      this.typeName(),
+                                      this.name,
+                                      this.hashCode()));
+                  }
+              }
+        section
+          h3 Briefcase
+          h5.
+            Setuptools extension which can create Android and XCode
+            projects from python package
+        section
+          h1 Batavia
+        section
+          h4 Vue.js
+          pre
+            code.hljs.html.
+              #{"<"}div id="app"#{">"}
+                {{ message }}
+              #{"<"}/div#{">"}
+          pre
+            code.hljs.js.
+              var app = new Vue({
+                el: '#app',
+                data: {message: 'Hello Vue!'}
+              })
+        section
+          h4 Python VM in the browser
+          pre
+            code.hljs.python.
+              import dom
+
+              Vue = dom.window.self.Vue
+
+              class options:
+                  el = '#app'
+                  class data:
+                      message = 'Hello Vue!'
+
+              app = Vue(options)
+        section
+          h4 index.py
+          pre
+            code.hljs.bash.
+              python -m py_compile index.py
+              # -> index.pyc
+          h4 index.html
+          pre
+            code.hljs.html.
+              #{"<"}script src="batavia.js"#{">"}#{"<"}/script#{">"}
+              #{"<"}script id="batavia-index"#{">"}
+                Fg0NCnw5dVi7AAAA4wA...
+              #{"<"}/script#{">"}
+              #{"<"}script type="text/javascript"#{">"}
+               window.vm = new batavia.VirtualMachine({});
+               window.vm.run('index', []);
+              #{"<"}/script#{">"}
+        section
+          h4 I'm going to build my own React
+          h4 with Python and Codecs
+          pre
+            code.hljs.python.
+              # coding: pyxl
+              import dom
+              from pyxl import html
+
+              div = dom.document.getElementById('fill-me')
+              div.innerHTML = #[mark(style='font-weight: bold;') #{"<"}h1#{">"}]Hello World!#[mark(style='font-weight: bold;') #{"<"}/h1#{">"}]
+        section
+          h4 index.html
+          pre
+            code.hljs.html.
+              #{"<"}script src="batavia.js"#{">"}#{"<"}/script#{">"}
+              #{"<"}!-- Bandled PyXL library --#{">"}
+              #{"<"}script id="batavia-pyxl"#{">"}
+                Fg0NCgELfFgWAAAA4w...
+              #{"<"}/script#{">"}
+              #{"<"}script id="batavia-pyxl.html"#{">"}
+                Fg0NCtRLfFh6AAAA4w...
+              #{"<"}/script#{">"}
+              #{"<"}!-- Our index.py --#{">"}
+              #{"<"}script id="batavia-index"#{">"}
+                Fg0NCj8SfFiEAAAA4w...
+              #{"<"}/script#{">"}
+        section
+          h4 Replacing import system with webpack
+          h6
+            i Because why not?
+          pre
+            code.hljs.js.
+              window.vm = new batavia.VirtualMachine({
+                loader: function(name) {
+                  var stdlibModule = batavia.stdlib[name];
+                  return {
+                    'bytecode': stdlibModule,
+                    'filename': new batavia.types.Str("#{"<"}input#{">"}")
+                  };
+                }
+              });
+              window.vm.run('index', []);
+          h4 Python modules as js files
+          pre
+            code.hljs.js.
+              module.exports = 'Fg0NCuBMo1brAwAA4wAAAAAAAAA...'
+        section(data-background='pic/traceback.png' data-background-size='contain')
+          br
+        section
+          h3 Ouroboros
+          h5 Pure python implementation of the standard library
+        section
+          h2 Python all the things!
+        section
+          h2 pybee.org
+        section
+          h1 ?
+    script(src='lib/js/head.min.js')
+    script(src='js/reveal.js')
+    script(src='lib/js/highlight.min.js')
+    script.
+      hljs.initHighlightingOnLoad();
+    script.
+      Reveal.initialize({
+          controls: false,
+          progress: false,
+          slideNumber: true,
+          history: true,
+          transition: 'none',
+          dependencies: [
+              { src: 'plugin/notes/notes.js', async: true }
+          ]
+      });

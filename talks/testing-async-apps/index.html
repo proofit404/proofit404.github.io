@@ -1,0 +1,230 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <link rel="stylesheet" type="text/css" href="css/reveal.css">
+        <link rel="stylesheet" type="text/css" href="css/theme/white.css" id="theme">
+        <link rel="stylesheet" type="text/css" href="lib/css/github.css">
+        <link rel="stylesheet" type="text/css" href="css/customize.css">
+        <title>Testing Asynchronous Applications</title>
+    </head>
+    <body>
+        <div class="reveal">
+            <div class="slides">
+                <section>
+                    <h2>Тестирование асинхронных приложений</h2>
+                    <h4>@proofit404</h4>
+                    <h6>email / github / twitter</h6>
+                </section>
+                <section>
+                    <h2>Зачем вообще заморачиваться?</h2>
+                </section>
+                <section>
+                    <h2>Who's in da house?</h2>
+                    <img src="pics/asyncio.png" alt="asyncio">
+                    <img src="pics/tornado.png" alt="tornado">
+                    <img src="pics/twisted.png" alt="twisted">
+                </section>
+                <section>
+                    <h2>asyncio</h2>
+                    <pre>
+                        <code class="hljs">
+@asyncio.coroutine
+def fetch_page(session, url):
+    response = yield from session.get(url)
+    assert response.status == 200
+    return (yield from response.text())
+                        </code>
+                    </pre>
+                </section>
+                <section>
+                    <h2>Event loop</h2>
+                    <pre>
+                        <code class="hljs">
+loop = asyncio.get_event_loop()
+session = aiohttp.ClientSession()
+coroutine = fetch_page(session, 'https://www.python.org')
+loop.run_until_complete(coroutine)
+                        </code>
+                    </pre>
+                </section>
+                <section>
+                    <h2>Unittest</h2>
+                    <pre>
+                        <code class="hljs">
+class MyTest(TestCase):
+
+    def setUp(self):
+
+        self.db = StrictRedis()
+
+    def test_my_test(self):
+
+        self.db.set('foo', 'bar')
+        result = self.db.get('foo')
+        self.assertEqual('bar', result)
+                        </code>
+                    </pre>
+                </section>
+                <section>
+                    <h2>pytest</h2>
+                    <pre>
+                        <code class="hljs">
+@pytest.fixture
+def redis():
+    return StrictRedis()
+
+def test_my_test(redis):
+    redis.set('foo', 'bar')
+    result = redis.get('foo')
+    assert result == 'bar'
+                        </code>
+                    </pre>
+                </section>
+                <section>
+                    <h2>В тесте надо:</h2>
+                    <ul>
+                        <li>Создать event loop</li>
+                        <li>Собрать test case coroutine</li>
+                        <li>Запустить тест</li>
+                        <li>Дождаться выполнения</li>
+                        <li>Всё почистить</li>
+                    </ul>
+                </section>
+                <section>
+                    <h2>test case coroutine</h2>
+                    <pre>
+                        <code class="hljs">
+def async_test(f):
+    def wrapper(*args, **kwargs):
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(f(*args, **kwargs))
+    return wrapper
+                        </code>
+                    </pre>
+                </section>
+                <section>
+                    <h2>Test definition</h2>
+                    <pre>
+                        <code class="hljs">
+class MyTest(TestCase):
+
+    @async_test
+    def test_my_test(self):
+        session = aiohttp.ClientSession()
+        url = 'https://www.python.org'
+        result = yield from fetch_page(session, url)
+        self.assertIn('&lt;/html&gt;', result)
+                        </code>
+                    </pre>
+                </section>
+                <section>
+                    <h2>Проблемы</h2>
+                    <ul>
+                        <li>@async_test сильно бесит</li>
+                        <li>Неудобная подготовка окружения</li>
+                    </ul>
+                </section>
+                <section>
+                    <h2>Async Test Suite</h2>
+                    <pre>
+                        <code class="hljs">
+class AsyncTestCase(TestCase):
+
+    def run(self, result=None):
+        # ...
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self.setUp())
+        loop.run_until_complete(testMethod())
+        loop.run_until_complete(self.tearDown())
+        # ...
+                        </code>
+                    </pre>
+                </section>
+                <section>
+                    <h2>Test rewritten</h2>
+                    <pre>
+                        <code class="hljs">
+class MyTest(AsyncTestCase):
+
+    def setUp(self):
+
+        self.db = yield from create_redis(('localhost', 6379))
+
+    def test_my_test(self):
+
+        yield from self.db.set('foo', 'bar')
+        result = yield from self.db.get('foo')
+        self.assertEqual(b'bar', result)
+                        </code>
+                    </pre>
+                </section>
+                <section>
+                    <h2>Pytest suite</h2>
+                    <pre>
+                        <code class="hljs">
+@pytest.fixture
+def redis():
+    pass
+
+def async_test(f):
+    def wrapper(**kwargs):
+        @asyncio.coroutine
+        def coroutine(kwargs):
+            if 'redis' in kwargs:
+                kwargs['redis'] = yield from create_redis()
+            yield from asyncio.coroutine(f)(**kwargs)
+        loop = asyncio.new_event_loop()
+        loop.run_until_complete(coroutine(kwargs))
+    return wrapper
+                        </code>
+                    </pre>
+                </section>
+                <section>
+                    <h2>Pytest config</h2>
+                    <pre>
+                        <code class="hljs">
+def pytest_pyfunc_call(pyfuncitem):
+
+    path = pyfuncitem.location[0]
+    funcargs = pyfuncitem.funcargs
+    argnames = pyfuncitem._fixtureinfo.argnames
+    testargs = {arg: funcargs[arg] for arg in argnames}
+    async_test(pyfuncitem.obj)(**testargs)
+    return True
+                        </code>
+                    </pre>
+                </section>
+                <section>
+                    <h2>Test rewritten</h2>
+                    <pre>
+                        <code class="hljs">
+def test_my_test(redis):
+    yield from redis.set('foo', 'bar')
+    result = yield from redis.get('foo')
+    assert result == b'bar'
+                        </code>
+                    </pre>
+                </section>
+                <section>
+                    <h2>Вопросы</h2>
+                    <img src="pics/tomato.jpg" alt="Tomato">
+                </section>
+            </div>
+        </div>
+        <script type="text/javascript" src="lib/js/head.min.js"></script>
+        <script type="text/javascript" src="js/reveal.js"></script>
+        <script type="text/javascript">
+         Reveal.initialize({
+             controls: true,
+             progres: true,
+             history: true,
+             senter: true,
+             transition: "slide",
+             dependencies: [
+                 { src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } }
+             ]
+         });
+        </script>
+    </body>
+</html>

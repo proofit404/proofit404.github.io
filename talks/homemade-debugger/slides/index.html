@@ -1,0 +1,121 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><link rel="stylesheet" type="text/css" href="css/reveal.css"><link rel="stylesheet" type="text/css" href="css/theme/white.css" id="theme"><link rel="stylesheet" type="text/css" href="css/customize.css"><title>Homemade debugger</title><script>var link = document.createElement( 'link' );
+link.rel = 'stylesheet';
+link.type = 'text/css';
+link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+document.getElementsByTagName( 'head' )[0].appendChild( link );</script><!--[if lt IE 9]><script src="lib/js/html5shiv.js"></script><![endif]--></head><body><div class="reveal"><div class="slides"><section><h2>Homemade debugger</h2><h3>Artem Malyshev</h3><h4>@proofit404</h4></section><section><h2>I'm a proud member of the</h2><h2>Django Channels</h2><h2>maintenance team</h2></section><section><h2>Jimmy's story</h2></section><section><h3>Wow, Python is so cool!</h3><h3>I'll write my next project in Python!</h3><img class="comics" src="pic/pc.png"></section><section><h3>Lol, are you using print statements for debugging?!</h3><img class="comics" src="pic/wtf.png"></section><section><h3>if only I could write debugger myself...</h3><img class="comics" src="pic/fantasy.png"></section><section><h2>Chapter 1</h2><h4>Inside a Python interpreter</h4></section><section><h3>Source code</h3><pre><code><b>def</b> foo(a, b):
+    <b>return</b> a + b
+
+<b>if</b> __name__ == '__main__':
+    <b>print</b>(foo(1, 2))</code></pre></section><section><h3>Bytecode</h3><pre><code># <b>python -m dis simple.py</b>
+   0 LOAD_CONST        (&lt;code object foo&gt;)
+  ...
+  16 LOAD_NAME         (print)
+  18 LOAD_NAME         (foo)
+  20 LOAD_CONST        (1)
+  22 LOAD_CONST        (2)
+  24 CALL_FUNCTION
+  26 CALL_FUNCTION</code></pre></section><section><h3>Frame evaluation</h3><pre><code>_PyEval_EvalFrame(<b>PyFrameObject</b> *f, <b>int</b> throwflag) {
+     <b>switch</b> (opcode) {
+          TARGET(CALL_FUNCTION) { <b>/* <- */</b>
+               <b>PyObject</b> **sp, *res;
+               res = call_function(&sp, oparg, NULL); <b>/* <- */</b>
+               stack_pointer = sp;
+               PUSH(res);
+          }
+     }
+}</code></pre></section><section><h3>Python 1.4 Changelog</h3><img class="comics" src="pic/changelog.png"></section><section><h3>Trace function</h3><pre><code class="gray">_PyEval_EvalFrame(<b>PyFrameObject</b> *f, <b>int</b> throwflag) {
+     <b>switch</b> (opcode) {
+          TARGET(CALL_FUNCTION) {
+               <b>PyObject</b> **sp, *res;
+               res = call_function(&sp, oparg, NULL);
+               <mark class="black">call_trace(tracefunc, frame);</mark>
+               <mark class="black">JUMPTO(frame->f_lasti);</mark>
+               PUSH(res);
+          }
+    }
+}</code></pre></section><section><h3>Settrace event table</h3><table><tr><td>'call'</td><td>Before a function is executed.</td></tr><tr><td>'line'</td><td>Before a line is executed.</td></tr><tr><td>'return'</td><td>Before a function returns.</td></tr><tr><td>'exception'</td><td>After an exception occurs.</td></tr></table></section><section><h2>Chapter 2</h2><h4>Pdb implementation</h4></section><section><h3>Setup debugger</h3><pre><code class="gray"><b>def</b> foo(a, b):
+    <b>return</b> a + b
+
+<b>if</b> __name__ == '__main__':
+    <mark class="black"><b>import</b> mydbg; mydbg.set_trace()</mark>
+    <b>print</b>(foo(1, 2))</code></pre></section><section><h3>Naive usage</h3><pre><code><b>import</b> sys                                   # <b>python simple.py</b>
+                                                    call
+<b>def</b> set_trace():                           ['f_back', 'f_code', 'f_locals']
+    sys.settrace(dispatch)
+
+<b>def</b> dispatch(frame, event, arg):
+    <b>print</b>(event)
+    <b>print</b>(<b>dir</b>(frame))</code></pre></section><section><h3>Nested calls</h3><pre><code class="gray"><b>import</b> sys                                   <mark class="black"># <b>python simple.py</b></mark>
+                                                    <mark class="black">call</mark>
+<b>def</b> set_trace():                           <mark class="black">['f_back', 'f_code', 'f_locals']</mark>
+    sys.settrace(dispatch)               <mark class="black">line</mark>
+                                                    <mark class="black">['f_back', 'f_code', 'f_locals']</mark>
+<b>def</b> dispatch(frame, event, arg):
+    <b>print</b>(event)
+    <b>print</b>(<b>dir</b>(frame))
+    <mark class="black"><b>return</b> dispatch</mark></code></pre></section><section><h3>Print lines of code</h3><pre><code class="gray"><b>import</b> sys                                       <mark class="black"># <b>python simple.py</b></mark>
+<mark class="black"><b>import</b> linecache</mark>                               <mark class="black"><b>def</b> foo(a, b):</mark>
+                                                        <mark class="black"><b>return</b> a + b</mark>
+<b>def</b> dispatch(frame, event, arg):       <mark class="black"><b>return</b> a + b</mark>
+    <mark class="black">line = linecache.getline(</mark>
+        <mark class="black">frame.f_code.co_filename,</mark>
+        <mark class="black">frame.f_lineno,</mark>
+    <mark class="black">)</mark>
+    <mark class="black"><b>print</b>(line)</mark>
+    <b>return</b> dispatch</code></pre></section><section><h3>Interactive prompt</h3><pre><code class="gray">        frame.f_lineno,                      <mark class="black"># <b>python simple.py</b></mark>
+    )                                                <mark class="black"><b>def</b> foo(a, b):</mark>
+    <b>print</b>(line)                                  <mark class="black"><b>(Mydbg)</b> foo</mark>
+    <mark class="black">cmd = <b>True</b></mark>                               <mark class="black">&lt;function foo at 0x7f153b&gt;</mark>
+    <mark class="black"><b>while</b> cmd:</mark>                                  <mark class="black"><b>(Mydbg)</b> b</mark>
+        <mark class="black">cmd = <b>input</b>('(Mydbg) ')</mark>           <mark class="black">2</mark>
+        <mark class="black">run_cmd(cmd, frame)</mark>             <mark class="black"><b>(Mydbg)</b></mark>
+    <b>return</b> dispatch                         <mark class="black"><b>return</b> a + b</mark>
+                                                     <mark class="black"><b>(Mydbg)</b></mark>
+<mark class="black"><b>def</b> run_cmd(cmd, frame):</mark>
+    <mark class="black"><b>if</b> cmd <b>in</b> frame.f_locals:</mark>
+        <mark class="black"><b>print</b>(frame.f_locals[cmd])</mark></code></pre></section><section><h3>Commands</h3><h4>next, step in, contunue</h4><h4>up, down, where</h4><h4>expression eval, post mortem</h4></section><section><h2>Chapter 3</h2><h4>Threads and Multiprocessing</h4></section><section><h3>Things are way more interesting in the world of concurrency</h3><img class="comics" src="pic/server.png"></section><section><h3>Problems</h3><h4>Install tracer for all threads</h4><h4>Acquire the GIL</h4><h4>Reinstall tracer after fork</h4><h4>Stdin is not available</h4></section><section><h2>Chapter 4</h2><h4>Coroutines and asyncio</h4></section><section><h3>Generator based concurrency</h3><pre><code><b>(Mydbg)</b> list
+   1     <b>def</b> view():
+  2           mydbg.set_trace()
+  3  ->     cache = <b>yield</b> access_cache()
+  4           data = <b>yield</b> access_db()
+  5
+<b>(Mydbg)</b> next
+--Return--
+<b>(Mydbg)</b> # Hello event loop internals :'(</code></pre></section><section><h3>Coroutines based concurrency</h3><pre><code><b>(Mydbg)</b> list
+   1     <b>async def</b> view():
+  2           mydbg.set_trace()
+  3  ->     cache = <b>await</b> access_cache()
+  4           data = <b>await</b> access_db()
+  5
+<b>(Mydbg)</b> next
+-> data = <b>await</b> access_db()
+<b>(Mydbg)</b></code></pre></section><section><h2>Chapter 5</h2><h4>Smart Tracing</h4></section><section><h3>What if you don't even know where to start</h3><img class="comics" src="pic/reviewing.png"></section><section><h3>Something goes wrong</h3><pre><code>File "django/db/backends/utils.py", line 65, in execute
+  return self.cursor.execute(sql, params)
+File "django/db/utils.py", line 94, in __exit__
+  six.reraise(dj_exc_type, dj_exc_value, traceback)
+File "django/utils/six.py", line 685, in reraise
+  raise value.with_traceback(tb)
+File "django/db/backends/utils.py", line 63, in execute
+  return self.cursor.execute(sql)
+django.db.utils.DatabaseError: server closed the connection
+      This probably means the server terminated abnormally
+      before or while processing the request.</code></pre></section><section><h3>Let's track it down</h3><pre><code><b>from</b> hunter <b>import</b> trace, Q
+<b>import</b> mydbg
+
+trace(
+    Q(
+        module="django.db.utils",
+        function="close",
+        kind="call",
+        action=mydbg.set_trace,
+    )
+)</code></pre></section><section><h2>Chapter 6</h2><h4>Many years later...</h4></section><section><h3>A lot of cool tools were developed</h3><img class="comics" src="pic/antigravity.png"></section><section><h4>ipdb, pdb++, winpdb</h4><h4>BeeWare bugjar</h4><h4>JetBrains PyCharm debugger</h4><h4>GDB python extensions</h4></section><section><h3>10x engineer path</h3><img class="comics" src="pic/tenx.png"></section><section><h2>The End</h2></section></div></div><script src="lib/js/head.min.js"></script><script src="js/reveal.js"></script><script>Reveal.initialize({
+    controls: false,
+    progress: false,
+    slideNumber: true,
+    history: true,
+    transition: 'none',
+    dependencies: [
+        { src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } }
+    ]
+});</script></body></html>

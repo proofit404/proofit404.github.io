@@ -1,0 +1,146 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><link rel="stylesheet" type="text/css" href="css/reveal.css"><link rel="stylesheet" type="text/css" href="css/theme/serif.css" id="theme"><link rel="stylesheet" type="text/css" href="lib/css/github-gist.min.css"><link rel="stylesheet" type="text/css" href="css/customize.css"><title>GraphQL is coming</title><script>var link = document.createElement( 'link' );
+link.rel = 'stylesheet';
+link.type = 'text/css';
+link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+document.getElementsByTagName( 'head' )[0].appendChild( link );</script><!--[if lt IE 9]><script src="lib/js/html5shiv.js"></script><![endif]--></head><body><div class="reveal"><div class="slides"><section><img class="logo" src="pic/logo.svg"><h2>GraphQL is coming</h2><h3>Artem Malyshev</h3><h4>@proofit404</h4></section><section><h4>django/channels</h4><h4>django/daphne</h4><h4>django/asgi_redis</h4><h4>proofit404/asgi_rabbitmq</h4><h4>pika/pika</h4><h4>jupyter/kernel_gateway</h4><h4>proofit404/dependencies</h4><h4>xquery-mode/xquery-mode</h4><h4>bbatsov/projectile</h4><h4>melpa/melpa</h4></section><section data-background="pic/todolist.png" data-background-size="contain"><br></section><section data-background-color="#FFFFFF"><h4>What's wrong with REST?</h4><img src="pic/server-roundtrips.png"><aside class="notes"><p>Hyperlinks</p><p>To many round trips</p></aside></section><section><h4>Expand relations</h4><pre><code class="json">{
+    "title": "Finish monthly growth report",
+    "category": "Growth Team",
+    "tasks": [
+        {"order": 1, "title": "Review samples"},
+        {"order": 2, "title": "Summarize"},
+        {"order": 3, "title": "Send to customer"},
+        ...
+    ],
+}</code></pre><aside class="notes"><p>DRF nested serializers as fields</p><p>Overfetching</p></aside></section><section><h4>Custom endpoints</h4><pre><code>/todos_with_everything_i_need
+
+/todos_with_everything_i_need_with_author_v2
+
+/todos_with_everything_i_need_for_samsung_smart_tv
+
+/tightly_coupled_endpoint_for_a_specific_client</code></pre><aside class="notes"><p>Unpleasant to work API</p></aside></section><section data-background="pic/man-data-analytics.jpg" data-background-size="contain" data-background-color="#6F7170"><br><aside class="notes"><p>We do not think in</p><p>endpoints or join tables</p></aside></section><section><img class="logo" src="pic/logo.svg"><h3>GraphQL</h3></section><section><h4>Hello world</h4><pre><code>{
+  me {
+    name
+  }
+}</code></pre></section><section><h4>Hello world</h4><pre><code class="json">           {
+{            "data": {
+  me {          "me": {
+    name           "name": "Artem"
+  }             }
+}            }
+           }</code></pre></section><section><h4>Schema</h4><pre><code class="graphql">type Task {
+  id: ID!
+  title: String!
+  description: String!
+  createdBy: Employee!
+  assignedTo: Employee!
+  statusHistory: [Status]
+  comments: [Comment]
+}</code></pre></section><section><img src="pic/magic-cat.png"></section><section data-background-color="#DB594C"><img class="logo graphene-bg" src="pic/graphene.svg"><h3 class="graphene-text">Graphene</h3></section><section><h4>Schema in Python</h4><pre><code class="python small">type Task {                class Task(ObjectType):
+  id: ID!                      id = NonNull(ID)
+  title: String!               title = NonNull(String)
+  description: String!         description = NonNull(String)
+  created: Employee!           created = NonNull(Employee)
+  assigned: Employee!          assigned = NonNull(Employee)
+  statusHistory: [Status]      status_history = List(Status)
+  comments: [Comment]          comments = List(Comment)
+}</code></pre></section><section><h4>Schema in Django</h4><pre><code class="python">class Task(DjangoObjectType):
+    class Meta:
+        model = TaskModel
+
+class Query(ObjectType):
+    tasks = List(Task)
+
+    def resolve_tasks(self, args, context, info):
+        return TaskModel.objects.all()</code></pre></section><section><h4>Mutation in Django</h4><pre><code class="python">class CreateTask(Mutation):
+    class Input:
+        ...
+    task = Field(Task)
+
+    @staticmethod
+    def mutate(root, args, context, info):
+        ...
+
+class Mutation(ObjectType):
+
+    create_task = CreateTask.Field()</code></pre></section><section><h4>Views</h4><pre><code class="python">schema = graphene.Schema(Query, Mutation)
+
+view = GraphQLView.as_view(schema, graphiql=True)
+
+urlpatterns = [url(r'^$', view, name='graphql')]</code></pre></section><section><h4>Authorization</h4><pre><code class="python">class Query(ObjectType):
+
+    tasks = List(Task)
+
+    def resolve_tasks(self, args, context, info):
+
+        if context.user.is_authenticated():
+            return TaskModel.objects.all()
+        else:
+            return TaskModel.objects.none()</code></pre></section><section><h4>Filtration</h4><pre><code class="python">class Task(DjangoObjectType):
+    class Meta:
+        model = TaskModel
+        filter_fields = {
+            'title': ['icontains', 'startswith'],
+            'description': ['exact'],
+        }
+
+class TaskQuery(AbstractType):
+    all_tasks = DjangoFilterConnectionField(Task)</code></pre></section><section><h4>Filtration</h4><pre><code class="graphql">{
+  allTasks(title_Startswith: "to") {
+    edges {
+      node {
+        id
+        title
+      }
+    }
+  }
+}</code></pre></section><section><h3>Batch processing</h3><h3>&</h3><h3>Server Cache</h3></section><section><h4>SQL for one GraphQL query</h4><pre><code class="sql">SELECT ... WHERE "employee"."id" = 2;
+SELECT ... WHERE "employee"."id" = 3;
+SELECT ... WHERE "employee"."id" = 3;
+SELECT ... WHERE "employee"."id" = 2;
+SELECT ... WHERE "employee"."id" = 2;
+SELECT ... WHERE "employee"."id" = 2;
+SELECT ... WHERE "employee"."id" = 4;
+SELECT ... WHERE "employee"."id" = 5;
+SELECT ... WHERE "employee"."id" = 5;
+SELECT ... WHERE "employee"."id" = 4;
+SELECT ... WHERE "employee"."id" = 4;</code></pre></section><section><h4>Data Loader</h4><pre><code>def resolve_tasks(self, args, context, info):
+
+    ids = args.get('ids')
+    return Promise(
+        DataLoader.load(ids),
+    ).get()</code></pre></section><section><h4>SQL with Data Loader</h4><pre><code class="sql">SELECT ... WHERE "employee"."id"
+  IN (1, 2, 3, 4, 5);
+SELECT ... WHERE "employee"."id"
+  IN (1, 2, 3, 6, 7);</code></pre></section><section><h4>Data Loader</h4><pre><code>def resolve_tasks(self, args, context, info):
+
+    ids = args.get('ids')
+    return Promise(
+        context.data_loader.load(ids),
+    ).get()</code></pre></section><section><h4>SQL with Caching</h4><pre><code class="sql">SELECT ... WHERE "employee"."id"
+  IN (1, 2, 3, 4, 5);
+SELECT ... WHERE "employee"."id"
+  IN (         6, 7);</code></pre></section><section><img src="pic/programmers-at-work.png"></section><section data-background-color="#3B3738"><img class="logo relay-bg" src="pic/relay.svg"><h3 class="relay-text">Relay</h3></section><section data-background="pic/marked-todolist.png" data-background-size="contain"><br></section><section><h4>Frontend :(</h4><pre><code class="jsx small">class Task extends React.Component {
+  render() {
+    return &lt;li key={title}&gt;
+             &lt;b&gt;{title}&lt;/b&gt; {description}
+           &lt;/li&gt;
+  }
+}
+Task = Relay.createContainer(Task, {
+  task: () =&gt; Relay.QL`
+    fragment on Task {
+      title,
+      description,
+    }
+  `,
+});</code></pre></section><section><h4>Pros</h4><ul><li>Conditional fetching</li><li>Cache</li><li>Pagination</li><li>Optimistic updates</li></ul></section><section><h3>Summarize</h3><h4>Pros</h4><ul><li>No extra roundtrips</li><li>No overfetching</li><li>Frontend goodies</li></ul><h4>Cons</h4><ul><li>Backend nightmare</li></ul></section><section><h2>Questions?</h2></section></div></div><script src="lib/js/head.min.js"></script><script src="js/reveal.js"></script><script src="lib/js/highlight.min.js"></script><script>hljs.initHighlightingOnLoad();</script><script>Reveal.initialize({
+    controls: false,
+    progress: false,
+    slideNumber: true,
+    history: true,
+    transition: 'none',
+    dependencies: [
+        { src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+        { src: 'plugin/notes/notes.js', async: true }
+    ]
+});</script></body></html>

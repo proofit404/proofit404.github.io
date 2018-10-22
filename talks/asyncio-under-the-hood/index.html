@@ -1,0 +1,380 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="css/reveal.css">
+    <link rel="stylesheet" href="css/theme/beige.css">
+    <link rel="stylesheet" href="lib/css/zenburn.css">
+    <link rel="stylesheet" href="css/customize.css">
+    <title>asyncio under the hood</title>
+  </head>
+  <body>
+    <div class="reveal">
+      <div class="slides">
+        <section>
+          <h1>asyncio under the hood</h1>
+          <h3>@proofit404</h3>
+        </section>
+        <section>
+          <h1>What is it all about?</h1>
+        </section>
+        <section>
+          <h2>Synchronous code</h2>
+          <pre>
+            <code class="hljs python">
+while True:
+    if click_happens():
+        process_click()
+    else:
+        time.sleep(0.05)
+            </code>
+          </pre>
+        </section>
+        <section>
+          <h2>Asynchronous code</h2>
+          <pre>
+            <code class="hljs html">
+&lt;button onclick="alert('Hello');"&gt;
+    Push it!
+&lt;/button&gt;
+            </code>
+          </pre>
+        </section>
+        <section>
+          <h1>Overview</h1>
+        </section>
+        <section>
+          <h2>asyncio concepts</h2>
+          <ul>
+            <li>Event loop</li>
+            <li>Futures + Callbacks</li>
+            <li>Tasks + Coroutines</li>
+            <li>Transports + Streams</li>
+          </ul>
+        </section>
+        <section>
+          <h2>Event loop</h2>
+          <pre>
+            <code class="hljs python">
+def stop_loop(loop):
+    loop.stop()
+
+loop = asyncio.get_event_loop()
+loop.call_soon(stop_loop, loop)
+loop.run_forever()
+loop.close()
+            </code>
+          </pre>
+          <aside class="notes">
+            <ul>
+              <li>I/O multiplexing - examine and block on multiple I/O streams</li>
+              <li>Event dispatching</li>
+            </ul>
+          </aside>
+        </section>
+        <section>
+          <h2>Futures</h2>
+          <pre>
+            <code class="hljs python">
+loop = asyncio.get_event_loop()
+
+def done(future):
+    print('The future is done')
+    loop.stop()
+
+future = asyncio.Future()
+future.add_done_callback(done)
+
+loop.call_soon(future.set_result, 1)
+loop.run_forever()
+loop.close()
+            </code>
+          </pre>
+        </section>
+        <section>
+          <h2>Coroutines</h2>
+          <pre>
+            <code class="hljs python">
+async def compute(x, y):
+    print("Compute %s + %s ..." % (x, y))
+    await asyncio.sleep(1.0)
+    return x + y
+
+async def print_sum(x, y):
+    result = await compute(x, y)
+    print("%s + %s = %s" % (x, y, result))
+
+loop = asyncio.get_event_loop()
+loop.run_until_complete(print_sum(1, 2))
+loop.close()
+            </code>
+          </pre>
+        </section>
+        <section data-background="pics/tulip_coro.png" data-background-size="contain"></section>
+        <section>
+          <h2>Streams</h2>
+          <pre>
+            <code class="hljs python">
+async def tcp_echo_client(message):
+    reader, writer = await asyncio.open_connection('127.0.0.1', 8888)
+
+    print('Send: %r' % message)
+    writer.write(message.encode())
+
+    data = await reader.read(100)
+    print('Received: %r' % data.decode())
+
+    print('Close the socket')
+    writer.close()
+
+loop = asyncio.get_event_loop()
+loop.run_until_complete(tcp_echo_client('Hello World!'))
+loop.close()
+            </code>
+          </pre>
+        </section>
+        <section>
+          <h1>How about a real world example?</h1>
+        </section>
+        <section>
+          <h2>Redis handler</h2>
+          <pre>
+            <code class="hljs python">
+def apply(redis, num):
+    key = b'foo' + num
+    redis.execute_command('set', key, num)
+    result = redis.execute_command('get', key)
+    assert result == num
+            </code>
+          </pre>
+        </section>
+        <section>
+          <h2>Run test</h2>
+          <pre>
+            <code class="hljs python">
+def do():
+    redis = StrictRedis()
+    start = time()
+    for x in range(10000):
+        apply(redis, str(x).encode())
+    end = time()
+    print('Time spent:', end - start)
+            </code>
+          </pre>
+        </section>
+        <section>
+          <h2>aioredis handler</h2>
+          <pre>
+            <code class="hljs python">
+async def apply(redis, num):
+    key = b'foo' + num
+    await redis.execute(b'set', key, num)
+    result = await redis.execute(b'get', key)
+    assert result == num
+            </code>
+          </pre>
+        </section>
+        <section>
+          <h2>Run asynchronous test</h2>
+          <section>
+            <pre>
+              <code class="hljs python">
+async def do(loop):
+    redis = await create_connection(('localhost', 6379))
+    start = loop.time()
+    tasks = [asyncio.ensure_future(apply(redis, str(x).encode()))
+             for x in range(10000)]
+    await asyncio.wait(tasks)
+    end = loop.time()
+    print('Time spent:', end - start)
+    redis.close()
+    await redis.wait_closed()
+              </code>
+            </pre>
+          </section>
+        </section>
+        <section>
+          <h2>Results so far</h2>
+          <pre>
+            <code class="hljs sh">
+$ python synctest.py
+Time spent: 10.756768226623535
+$ python asynctest.py
+Time spent: 11.661769957999695
+            </code>
+          </pre>
+        </section>
+        <section>
+          <h1>Under the hood</h1>
+        </section>
+        <section>
+          <h2>Event loop</h2>
+          <pre>
+            <code class="hljs python">
+def read(conn, mask):
+    print(conn.recv(1000))
+
+selector = selectors.DefaultSelector()
+sock = socket.socket()  # bind, listen, etc
+sock.setblocking(False)
+selector.register(sock, EVENT_READ, read)
+
+for key, mask in selector.select():
+    key.data(key.fileobj, mask)
+            </code>
+          </pre>
+        </section>
+        <section>
+          <h2>Monotonic clock</h2>
+          <pre>
+            <code class="hljs python">
+import time
+time.monotonic()
+            </code>
+          </pre>
+          <aside class="notes">
+            <ul>
+              <li>Count CPU tics</li>
+              <li>Can't go back</li>
+              <li>NTP can change system time and we fuck up callback schedule</li>
+            </ul>
+          </aside>
+        </section>
+        <section>
+          <h2>Futures</h2>
+          <pre>
+            <code class="hljs python">
+class Future:
+
+    def __iter__(self):
+        if not self.done():
+            self._blocking = True
+            yield self  # This tells Task to wait for completion.
+        assert self.done(), "yield from wasn't used with future"
+        return self.result()  # May raise too.
+            </code>
+          </pre>
+        </section>
+        <section>
+          <h1>Write your own library</h1>
+        </section>
+        <section>
+          <h2>aioredis create connection</h2>
+          <pre>
+            <code class="hljs python">
+async def create_connection(address):
+    host, port = address
+    reader, writer = await asyncio.open_connection(host, port)
+    conn = RedisConnection(reader, writer)
+    return conn
+            </code>
+          </pre>
+        </section>
+        <section>
+          <h2>aioredis connection</h2>
+          <pre>
+            <code class="hljs python">
+class RedisConnection:
+
+    def __init__(self, reader, writer):
+        self._reader = reader
+        self._writer = writer
+        self._waiters = deque()
+        self._parser = hiredis.Reader()
+        self._reader_task = asyncio.ensure_future(self._read_data())
+            </code>
+          </pre>
+        </section>
+        <section>
+          <h2>Execute</h2>
+          <pre>
+            <code class="hljs python">
+def execute(self, command, *args):
+    fut = asyncio.Future()
+    self._writer.write(encode_command(command, *args))
+    self._waiters.append(fut)
+    return fut
+            </code>
+          </pre>
+        </section>
+        <section>
+          <h2>Reader</h2>
+          <pre>
+            <code class="hljs python">
+async def _read_data(self):
+    while not self._reader.at_eof():
+        data = await self._reader.read(MAX_CHUNK_SIZE)
+        self._parser.feed(data)
+        while True:
+            obj = self._parser.gets()
+            if obj is False:
+                break
+            self._process_data(obj)
+            </code>
+          </pre>
+        </section>
+        <section>
+          <h2>Process data</h2>
+          <pre>
+            <code class="hljs python">
+def _process_data(self, obj):
+    waiter = self._waiters.popleft()
+    waiter.set_result(obj)
+            </code>
+          </pre>
+        </section>
+        <section>
+          <h1>Last but not least</h1>
+        </section>
+        <section>
+          <h2>Troubleshooting</h2>
+          <ul>
+            <li>Coroutine object never scheduled</li>
+            <li>Exception never consumed</li>
+            <li>Pending task destroyed</li>
+          </ul>
+        </section>
+        <section>
+          <h2>Other features</h2>
+          <ul>
+            <li>Thread executor</li>
+            <li>Locks, semaphores</li>
+            <li>Timeouts</li>
+            <li>TLS everywhere</li>
+            <li>Submit a coroutine from a different thread</li>
+          </ul>
+        </section>
+        <section>
+          <h2>Pros</h2>
+          <ul>
+            <li>Clean code</li>
+            <li>Tons of aio-libs</li>
+            <li>Friendly community</li>
+          </ul>
+        </section>
+        <section>
+          <h2>Cons</h2>
+          <img src="pics/doom.png">
+        </section>
+        <section>
+          <h1>The end</h1>
+        </section>
+      </div>
+    </div>
+    <script src="lib/js/head.min.js"></script>
+    <script src="js/reveal.js"></script>
+    <script>
+      Reveal.initialize({
+        controls: true,
+        progress: true,
+        history: true,
+        center: true,
+        transition: 'slide',
+        dependencies: [
+          { src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+          { src: 'plugin/notes/notes.js', async: true }
+        ]
+      });
+    </script>
+  </body>
+</html>

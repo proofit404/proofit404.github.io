@@ -1,0 +1,424 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <link rel="stylesheet" href="css/reveal.css">
+        <link rel="stylesheet" href="css/theme/beige.css">
+        <link rel="stylesheet" href="lib/css/zenburn.css">
+        <link rel="stylesheet" href="css/customize.css">
+        <title>Pattern Matching in Python</title>
+    </head>
+    <body>
+        <div class="reveal">
+            <div class="slides">
+                <section>
+                    <h1>Pattern Matching in Python</h1>
+                    <h3>@proofit404</h3>
+                </section>
+                <section data-background="pics/PT.png" data-background-size="contain" data-background-color="#E10028">
+                    <aside class="notes">
+                        <ul>
+                            <li>Олимпийские игры</li>
+                            <li>Positive Research</li>
+                            <li>Max Patrol 8</li>
+                            <li>Web application security</li>
+                            <li>Web application inspector</li>
+                            <li>SIEM log management</li>
+                            <li>Multiscanner</li>
+                        </ul>
+                    </aside>
+                </section>
+                <section>
+                    <h1>Ocaml</h1>
+                </section>
+                <section>
+                    <h2>The Hard Way</h2>
+                    <pre>
+                        <code class="hljs ocaml">
+# let x = 1;;
+
+# x;;
+- : int = 1
+                        </code>
+                    </pre>
+                </section>
+                <section>
+                    <h2>Even harder</h2>
+                    <pre>
+                        <code class="hljs ocaml">
+# let add x y = x + y;;
+
+# add 1 2;;
+- : int = 3
+                        </code>
+                    </pre>
+                </section>
+                <section>
+                    <h2>How far we can go?</h2>
+                    <pre>
+                        <code class="hljs ocaml">
+# let rec factorial x =
+  if x = 1
+  then 1
+  else x * factorial (x - 1);;
+
+# factorial 5;;
+- : int = 120
+                        </code>
+                    </pre>
+                </section>
+                <section>
+                    <h1>Algebraic Data Types</h1>
+                </section>
+                <section>
+                    <h2>List</h2>
+                    <pre>
+                        <code class="hljs ocaml">
+# type list = Cons * list | Nil;;
+
+# let mylist = Cons(1, Cons(2, Cons(3, Cons(4, Cons(5, Nil)))));;
+
+# let mylist = 1 :: 2 :: 3 :: 4 :: 5 :: [];;
+
+# let mylist = [1; 2; 3; 4; 5];;
+                        </code>
+                    </pre>
+                </section>
+                <section>
+                    <h2>Fold right</h2>
+                    <pre>
+                        <code class="hljs ocaml">
+# let rec foldr f initial l =
+    match l with
+    | [] -> initial
+    | head :: tail -> f head (foldr f initial tail);;
+
+# foldr ( + ) 0 [1; 2; 3; 4; 5];;
+- : int = 15
+# foldr ( * ) 1 [1; 2; 3; 4; 5];;
+- : int = 120
+                        </code>
+                    </pre>
+                </section>
+                <section>
+                    <h2>Tree</h2>
+                    <pre>
+                        <code class="hljs ocaml">
+# type tree = Leaf of int
+            | Node of tree * tree;;
+
+# let mytree = Node(Node(Leaf(0), Leaf(2)), Node(Leaf(3), Leaf(4)));;
+                        </code>
+                    </pre>
+                </section>
+                <section>
+                    <h2>Predicate search</h2>
+                    <pre>
+                        <code class="hljs ocaml">
+# let rec have_in_tree test tree =
+    match tree with
+    | Leaf x -> test x
+    | Node (left, right) ->
+       have_in_tree test left
+       || have_in_tree test right;;
+
+# have_in_tree (fun x -> x = 0) mytree;;
+- : bool = true
+                        </code>
+                    </pre>
+                </section>
+                <section>
+                    <h1>Let's do it in Python!</h1>
+                </section>
+                <section>
+                    <h2>So how it looks like?</h2>
+                    <pre>
+                        <code class="hljs python">
+from patterns import match
+
+@match(1)
+def test(x):
+    return 'one'
+
+@match(2)
+def test(x):
+    return 'two'
+
+>>> test(1)
+'one'
+>>> test(2)
+'two'
+                        </code>
+                    </pre>
+                </section>
+                <section>
+                    <h2>Match decorator</h2>
+                    <pre>
+                        <code class="hljs python">
+def match(*expressions):
+
+    def decorator(f):
+        if f.__name__ not in f.__globals__:
+            def wrapper(*args):
+                ...
+        else:
+            wrapper = f.__globals__[f.__name__]
+        ...
+        return wrapper
+
+    return decorator
+                        </code>
+                    </pre>
+                </section>
+                <section>
+                    <h2>Store signatures</h2>
+                    <pre>
+                        <code class="hljs python">
+def wrapper(*args):
+    ...
+
+wrapper.signatures = []
+
+signature = Signature(*expressions)
+
+wrapper.signatures.append((signature, f))
+                        </code>
+                    </pre>
+                </section>
+                <section>
+                    <h2>Signature</h2>
+                    <pre>
+                        <code class="hljs python">
+class Signature:
+
+    def __init__(self, *args):
+
+        self.args = args
+
+    def __eq__(self, args):
+
+        return args == self.args
+
+    def arguments(self, args):
+
+        return args
+                        </code>
+                    </pre>
+                </section>
+                <section>
+                    <h2>Analyze call</h2>
+                    <pre>
+                        <code class="hljs python">
+def wrapper(*args):
+    for signature, f in wrapper.signatures:
+        if signature == args:
+            return f(*signature.arguments(args))
+                        </code>
+                    </pre>
+                </section>
+                <section>
+                    <h1>Introduce expressions</h1>
+                </section>
+                <section>
+                    <h2>Expressions</h2>
+                    <pre>
+                        <code class="hljs python">
+from patterns import match, x, _
+
+@match(x > 5)
+def greater_test(x):
+    return '%s greater then five' % x
+
+@match(_)
+def greater_test(x):
+    return '%s less then or equal to five' % x
+
+>>> greater_test(7)
+'7 greater then five'
+>>> greater_test(1)
+'1 less then or equal to five'
+                        </code>
+                    </pre>
+                </section>
+                <section>
+                    <h2>Import hacks</h2>
+                    <pre>
+                        <code class="hljs python">
+class module(types.ModuleType):
+
+    def __getattr__(self, name):
+
+        if name == 'match':
+            return match
+        else:
+            return Expression(name)
+
+old_module = sys.modules['patterns']
+
+new_module = sys.modules['patterns'] = module('patterns')
+                        </code>
+                    </pre>
+                </section>
+                <section>
+                    <h2>Expression</h2>
+                    <pre>
+                        <code class="hljs python">
+class Expression:
+
+    def __init__(self, name):
+
+        self.name = name
+
+    def __gt__(self, other):
+
+        return GreaterPredicate(self.name, other)
+                        </code>
+                    </pre>
+                </section>
+                <section>
+                    <h2>Predicate</h2>
+                    <pre>
+                        <code class="hljs python">
+class Predicate:
+
+    def __init__(self, name, *args):
+
+        self.name = name
+        self.args = args
+
+class GreaterPredicate(Predicate):
+
+    def __eq__(self, other):
+
+        return (isinstance(other, type(self.args[0])) and
+                other > self.args[0])
+                        </code>
+                    </pre>
+                </section>
+                <section>
+                    <h1>List pattern matching</h1>
+                </section>
+                <section>
+                    <h2>Fold right</h2>
+                    <pre>
+                        <code class="hljs python">
+from patterns import match, l, _
+
+@match(_, _, [])
+def foldr(f, initial, seq):
+    return initial
+
+@match(_, _, l[0], l[1:])
+def foldr(f, initial, head, tail):
+    return f(head, foldr(f, initial, tail))
+
+>>> foldr(lambda x, y: x + y, 0, [1, 2, 3, 4, 5])
+15
+>>> foldr(lambda x, y: x * y, 1, [1, 2, 3, 4, 5])
+120
+                        </code>
+                    </pre>
+                </section>
+                <section>
+                    <h2>Expression</h2>
+                    <pre>
+                        <code class="hljs python">
+class Expression:
+
+    def __getitem__(self, item):
+
+        if isinstance(item, int):
+            return IndexPredicate(self.name, item)
+        elif isinstance(item, slice):
+            return SlicePredicate(self.name, item)
+                        </code>
+                    </pre>
+                </section>
+                <section>
+                    <h2>Predicates</h2>
+                    <pre>
+                        <code class="hljs python">
+class IndexPredicate(Predicate):
+
+    pass
+
+class SlicePredicate(Predicate):
+
+    pass
+
+class HeadTailPredicate(Predicate):
+
+    def __eq__(self, other):
+
+        return (isinstance(other, list) and
+                len(other) >= self.args[0] + 1)
+                        </code>
+                    </pre>
+                </section>
+                <section>
+                    <h2>Signature equality</h2>
+                    <pre>
+                        <code class="hljs python">
+class Signature:
+
+    def __eq__(self, args):
+
+       signature = ()
+       for key, predicates in itertools.groupby(self.args):
+           ...
+           if (len(predicates) == 2 and
+               isinstance(predicates[0], IndexPredicate) and
+               isinstance(predicates[1], SlicePredicate)):
+                   item = predicates[0].args[0]
+                   signature += (HeadTailPredicate(key, item),)
+           ...
+       return args == signature
+                        </code>
+                    </pre>
+                </section>
+                <section>
+                    <h2>Signature call</h2>
+                    <pre>
+                        <code class="hljs python">
+class Signature:
+
+    def arguments(self, args):
+
+        call = ()
+        for key, predicates in itertools.groupby(self.args):
+            arg = next(args)
+            ...
+            if isinstance(predicate, HeadTailPredicate):
+                item = predicate.args[0]
+                call += (arg[item], arg[item + 1:])
+            ...
+        return call
+                        </code>
+                    </pre>
+                </section>
+                <section>
+                    <h1>Don't Try This at Home!</h1>
+                </section>
+                <section>
+                    <h1>Thanks!</h1>
+                </section>
+            </div>
+        </div>
+        <script type="text/javascript" src="lib/js/head.min.js"></script>
+        <script type="text/javascript" src="js/reveal.js"></script>
+        <script type="text/javascript">
+         Reveal.initialize({
+             controls: true,
+             progress: true,
+             history: true,
+             center: true,
+             transition: 'slide',
+             dependencies: [
+                 { src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+                 { src: 'plugin/notes/notes.js', async: true }
+             ]
+         });
+
+        </script>
+    </body>
+</html>

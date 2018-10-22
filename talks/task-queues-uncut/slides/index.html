@@ -1,0 +1,346 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <link rel="stylesheet" type="text/css" href="css/reveal.css">
+        <link rel="stylesheet" type="text/css" href="css/theme/white.css">
+        <link rel="stylesheet" type="text/css" href="lib/css/github-gist.css">
+        <link rel="stylesheet" type="text/css" href="css/customize.css">
+        <title>Task Queues Uncut</title>
+        <script>
+         var link = document.createElement( 'link' );
+         link.rel = 'stylesheet';
+         link.type = 'text/css';
+         link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+         document.getElementsByTagName( 'head' )[0].appendChild( link );
+        </script>
+    </head>
+    <body>
+        <div class="reveal">
+            <div class="slides">
+                <section data-background-color="#4382B4">
+                    <h1 style="color: white;">Task queues uncut</h1>
+                    <h3 style="color: white;">Малышев Артём</h3>
+                    <img src="pics/pyconru-logo.png">
+                </section>
+                <section>
+                    <img src="pics/ask.png" class="double-face face-corner">
+                    <img src="pics/celery.png" class="double-face">
+                </section>
+                <section>
+                    <img src="pics/nvie.jpg" class="double-face face-corner">
+                    <img src="pics/rq.png" class="double-face face-corner">
+                </section>
+                <section>
+                    <img src="pics/rabbitmq.png"><br>
+                    <img src="pics/direct-exchange.png">
+                    <aside class="notes">
+                        <ul>
+                            <li>Pub/Sub</li>
+                            <li>Ack</li>
+                            <li>QoS</li>
+                        </ul>
+                    </aside>
+                </section>
+                <section>
+                    <img src="pics/antirez.png" class="double-face face-corner">
+                    <img src="pics/redis.png" class="double-face">
+                </section>
+                <section>
+                    <h2>Celery</h2>
+                    <pre><code class="hljs python">app = Celery(__name__)
+
+@app.task
+def add(x, y):
+    return x + y
+
+add.delay(1, 2)</code></pre>
+                </section>
+                <section>
+                    <h2>RQ</h2>
+                    <pre><code class="hljs python">def add(x, y):
+    return x + y
+
+queue = rq.Queue('default')
+queue.enqueue(add, 1, 2)</code></pre>
+                </section>
+                <section>
+                    <h2>RabbitMQ queues</h2>
+                    <table>
+                        <tr>
+                            <td style="text-align: center;">Name</td>
+                            <td style="text-align: center;">Ready</td>
+                            <td style="text-align: center;">Unacked</td>
+                            <td style="text-align: center;">Total</td>
+                        </tr>
+                        <tr>
+                            <td>celery</td>
+                            <td style="text-align: right;">1</td>
+                            <td style="text-align: right;">0</td>
+                            <td style="text-align: right;">1</td>
+                        </tr>
+                    </table>
+                </section>
+                <section>
+                    <h2>Payload</h2>
+                    <pre><code class="hljs json">{
+    "task": "app.add",
+    "args": [1, 2],
+    "kwargs": {},
+    "id": "27ebcaee-444f-4379-a438-04c3b5bb0fc3",
+    "callbacks": null,
+    "errbacks": null,
+    "eta": null,
+    "expires": null,
+    "timelimit": [null, null],
+    "taskset": null,
+    "chord": null,
+    "retries": 0
+}</code></pre>
+                </section>
+                <section>
+                    <h2>Redis queues</h2>
+                    <pre><code class="hljs python" style="overflow: hidden;">>>> KEYS *
+1) "celery"
+>>> LRANGE celery 0 -1
+1) {
+       "properties": {
+           "body_encoding": "base64",
+           "delivery_info": {
+               "exchange": "celery",
+               "routing_key": "celery"
+           }
+       },
+       "body": "eyJ0aW1lbGltaXQiOiBbbnVsb...",
+       "content-type": "application/json"
+   }</code></pre>
+                </section>
+                <section>
+                    <h2>RQ</h2>
+                    <pre><code class="hljs python">>>> SMEMBERS rq:queues
+1) "rq:queue:default"
+>>> LRANGE rq:queue:default 0 -1
+1) "be58515f-9f330470995d"
+>>> HGETALL rq:job:be58515f-9f330470995d
+1) "status" "queued"
+2) "enqueued_at" "2016-06-14T19:45:39Z"
+3) "created_at" "2016-06-14T19:45:39Z"
+4) "origin" "default"
+5) "description" "lib.add(1, 2)"
+6) "data" "\x80\x04\x95\x17\x00\x00..."
+7) "timeout" "180"</code></pre>
+                </section>
+                <section>
+                    <h2>Accept task</h2>
+                    <pre><code class="hljs bash"># celery
+$ celery -A myapp worker -Q queue1,queue2
+
+# rq
+$ rq worker queue1 queue2</code></pre>
+                </section>
+                <section>
+                    <h2>RabbitMQ queues</h2>
+                    <table>
+                        <tr>
+                            <td style="text-align: center;">Name</td>
+                            <td style="text-align: center;">Ready</td>
+                            <td style="text-align: center;">Unacked</td>
+                            <td style="text-align: center;">Total</td>
+                        </tr>
+                        <tr>
+                            <td>celery</td>
+                            <td style="text-align: right;">0</td>
+                            <td style="text-align: right;">1</td>
+                            <td style="text-align: right;">1</td>
+                        </tr>
+                    </table>
+                </section>
+                <section>
+                    <h2>Redis queues</h2>
+                    <pre><code class="hljs python">>>> KEYS *
+1) "celery"
+2) "unacked"
+3) "unacked_index"
+4) "unacked_mutex"
+>>> HGETALL unacked
+1) "13ce9ff2-c596-4471"
+   "[{...}, \"celery\", \"celery\"]"</code></pre>
+                </section>
+                <section>
+                    <h2>RQ</h2>
+                    <pre><code class="hljs python">>>> HGETALL rq:job:be58515f-9f330470995d
+1) "status" "started"
+2) "enqueued_at" "2016-06-14T19:45:39Z"
+3) "created_at" "2016-06-14T19:45:39Z"
+4) "origin" "default"
+5) "description" "lib.add(1, 2)"
+6) "data" "\x80\x04\x95\x17\x00..."
+7) "timeout" "180"
+8) "started_at" "2016-06-14T21:21:14Z"
+>>> ZRANGE rq:wip:default 0 -1 WITHSCORES
+1) "be58515f-9f330470995d" "1465939514"</code></pre>
+                </section>
+                <section data-background="pics/iceberg.jpg" data-background-size="100%, auto">
+                    <h1 style="color: white;">Fragile acknowledgment</h1>
+                </section>
+                <section data-background="pics/iceberg.jpg" data-background-size="100%, auto">
+                    <h1 style="color: white;">rpoplpush</h1>
+                </section>
+                <section data-background="pics/worker-monochrome-photo.jpg" data-background-size="contain" data-background-color="#222222">
+                    <br>
+                </section>
+                <section data-background="pics/worker-celery-monochrome-photo.jpg" data-background-size="contain" data-background-color="#222222">
+                    <br>
+                </section>
+                <section data-background="pics/redis-fork.jpg" data-background-size="contain" data-background-position="left">
+                    <br>
+                </section>
+                <section>
+                    <h2>Task execution</h2>
+                    <pre><code class="hljs python"># celery
+def trace_task(uuid, args, kwargs, request=None):
+    R = retval = fun(*args, **kwargs)
+
+# rq
+class Job:
+    def perform(self):
+        self._result = self.func(
+            *self.args, **self.kwargs)</code></pre>
+                </section>
+                <section>
+                    <h2>concurrency</h2>
+                    <ul>
+                        &#x2713; gevent<br>
+                        &#x2717; twisted<br>
+                        &#x2717; tornado<br>
+                        &#x2717; asyncio<br>
+                    </ul>
+                </section>
+                <section data-background="pics/timeout-dog.jpg" data-background-size="100%, auto">
+                    <br>
+                </section>
+                <section data-background="pics/rate-limit.jpg" data-background-size="100%, auto">
+                    <br>
+                </section>
+                <section data-background="pics/train-crash.jpg" data-background-size="contain">
+                    <br>
+                </section>
+                <section data-background="pics/eta.jpg" data-background-size="100%, auto">
+                    <br>
+                </section>
+                <section data-background="pics/stop.jpg" data-background-size="contain">
+                    <br>
+                </section>
+                <section>
+                    <h2>Callback</h2>
+                    <pre><code class="hljs python">app.add.apply_async((1, 2), link=app.mul.s(3))</code></pre>
+                    <h2>Payload</h2>
+                    <pre><code class="hljs json">"callbacks": [
+    {
+        "task": "app.mul",
+        "args": [3],
+        "kwargs": {},
+        "options": {},
+        "chord_size": null,
+        "immutable": false,
+        "subtask_type": null
+    }
+]</code></pre>
+                </section>
+                <section>
+                    <h2>Chains</h2>
+                    <pre><code class="hljs python">c = chain(app.add.s(1, 2),
+          app.add.s(3),
+          app.mul.s(6))
+c()</code></pre>
+                </section>
+                <section>
+                    <h2>RQ Dependents</h2>
+                    <pre><code class="hljs python">job = q.enqueue(lib.add, 1, 2)
+delayed = q.enqueue(lib.add, 1, 2, depends_on=job)</code></pre>
+                    <h2>Redis</h2>
+                    <pre><code class="hljs python">>>> SMEMBERS rq:job:1183256d-2cf952c76:dependents
+1) "00b70a47-bba9051bd7da"
+>>> HGETALL rq:job:00b70a47-bba9051bd7da
+1) "status" "deferred"
+2) "dependency_id" "1183256d-2cf952c76"</code></pre>
+                </section>
+                <section>
+                    <h2>Groups</h2>
+                    <pre><code class="hljs python">g = group(app.add.s(1, 2), app.mul.s(3, 4))
+g()</code></pre>
+                </section>
+                <section>
+                    <h2>Chord</h2>
+                    <pre><code class="hljs python">ch = chord([app.add.s(1, 2), app.add.s(3, 4)])
+ch(app.mul.s(5))</code></pre>
+                    <h2>Payload</h2>
+                    <pre><code class="hljs json">"chord": {
+  "task": "app.mul",
+  "chord_size": 3,
+  "args": [7],
+  "kwargs": null,
+  "options": {
+    "task_id": "2f0f2a7f-e249828b3fc9",
+    "reply_to": "a53cb689-85a86c447428"
+  }
+}</code></pre>
+                </section>
+                <section data-background="pics/rabbit_dont_come_easy.jpg" data-background-size="contain">
+                    <br>
+                </section>
+                <section data-background="pics/rb.svg" data-background-size="contain">
+                    <br>
+                </section>
+                <section>
+                    <blockquote>
+                        <p>
+                            Celery: Redis as a broker deprecated in
+                            4.0
+                        </p>
+                        Ask Solem (@asksol)
+                        <a href="https://twitter.com/asksol/status/747643979492098048">
+                            June 28, 2016
+                        </a>
+                    </blockquote>
+                    <blockquote>
+                        <p>
+                            So I’m late for work, and seems like Redis
+                            as a broker is no longer deprecated :)
+                        </p>
+                        Ask Solem (@asksol)
+                        <a href="https://twitter.com/asksol/status/747862068066320384">
+                            June 28, 2016
+                        </a>
+                    </blockquote>
+                </section>
+                <section data-background="pics/be-a-good-engineer.png" data-background-size="contain" data-background-color="#225D41">
+                    <br>
+                </section>
+                <section data-background-color="#4382B4">
+                    <h1 style="color: white;">Thanks</h1>
+                    <h3 style="color: white;">proofit404@gmail.com</h3>
+                    <img src="pics/email.png" class="contact-icon">
+                    <img src="pics/github.png" class="contact-icon">
+                    <img src="pics/twitter.png" class="contact-icon">
+                    <img src="pics/facebook.png" class="contact-icon">
+                </section>
+            </div>
+        </div>
+        <script type="text/javascript" src="lib/js/head.min.js"></script>
+        <script type="text/javascript" src="js/reveal.js"></script>
+        <script type="text/javascript">
+         Reveal.initialize({
+             controls: false,
+             progress: false,
+             history: true,
+             center: true,
+             transition: 'slide',
+             dependencies: [
+                 { src: 'plugin/notes/notes.js', async: true },
+                 { src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } }
+             ]
+         });
+        </script>
+    </body>
+</html>

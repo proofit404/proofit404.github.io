@@ -1,0 +1,119 @@
+Internal types
+
+    A few types used internally by the interpreter are exposed to the
+    user. Their definitions may change with future versions of the
+    interpreter, but they are mentioned here for completeness.
+
+    Code objects
+
+        Code objects represent byte-compiled executable Python code,
+        or bytecode. The difference between a code object and a
+        function object is that the function object contains an
+        explicit reference to the function’s globals (the module in
+        which it was defined), while a code object contains no
+        context; also the default argument values are stored in the
+        function object, not in the code object (because they
+        represent values calculated at run-time). Unlike function
+        objects, code objects are immutable and contain no references
+        (directly or indirectly) to mutable objects.
+
+        Special read-only attributes: co_name gives the function name;
+        co_argcount is the number of positional arguments (including
+        arguments with default values); co_nlocals is the number of
+        local variables used by the function (including arguments);
+        co_varnames is a tuple containing the names of the local
+        variables (starting with the argument names); co_cellvars is a
+        tuple containing the names of local variables that are
+        referenced by nested functions; co_freevars is a tuple
+        containing the names of free variables; co_code is a string
+        representing the sequence of bytecode instructions; co_consts
+        is a tuple containing the literals used by the bytecode;
+        co_names is a tuple containing the names used by the bytecode;
+        co_filename is the filename from which the code was compiled;
+        co_firstlineno is the first line number of the function;
+        co_lnotab is a string encoding the mapping from bytecode
+        offsets to line numbers (for details see the source code of
+        the interpreter); co_stacksize is the required stack size
+        (including local variables); co_flags is an integer encoding a
+        number of flags for the interpreter.
+
+        The following flag bits are defined for co_flags: bit 0x04 is
+        set if the function uses the *arguments syntax to accept an
+        arbitrary number of positional arguments; bit 0x08 is set if
+        the function uses the **keywords syntax to accept arbitrary
+        keyword arguments; bit 0x20 is set if the function is a
+        generator.
+
+        Future feature declarations (from __future__ import division)
+        also use bits in co_flags to indicate whether a code object
+        was compiled with a particular feature enabled: bit 0x2000 is
+        set if the function was compiled with future division enabled;
+        bits 0x10 and 0x1000 were used in earlier versions of Python.
+
+        Other bits in co_flags are reserved for internal use.
+
+        If a code object represents a function, the first item in
+        co_consts is the documentation string of the function, or None
+        if undefined.
+
+    Frame objects
+
+        Frame objects represent execution frames. They may occur in
+        traceback objects (see below).
+
+        Special read-only attributes: f_back is to the previous stack
+        frame (towards the caller), or None if this is the bottom
+        stack frame; f_code is the code object being executed in this
+        frame; f_locals is the dictionary used to look up local
+        variables; f_globals is used for global variables; f_builtins
+        is used for built-in (intrinsic) names; f_lasti gives the
+        precise instruction (this is an index into the bytecode string
+        of the code object).
+
+        Special writable attributes: f_trace, if not None, is a
+        function called at the start of each source code line (this is
+        used by the debugger); f_lineno is the current line number of
+        the frame — writing to this from within a trace function jumps
+        to the given line (only for the bottom-most frame). A debugger
+        can implement a Jump command (aka Set Next Statement) by
+        writing to f_lineno.
+
+        Frame objects support one method:
+
+        frame.clear()
+
+            This method clears all references to local variables held
+            by the frame. Also, if the frame belonged to a generator,
+            the generator is finalized. This helps break reference
+            cycles involving frame objects (for example when catching
+            an exception and storing its traceback for later use).
+
+            RuntimeError is raised if the frame is currently
+            executing.
+
+            New in version 3.4.
+
+    Traceback objects
+
+        Traceback objects represent a stack trace of an exception. A
+        traceback object is created when an exception occurs. When the
+        search for an exception handler unwinds the execution stack,
+        at each unwound level a traceback object is inserted in front
+        of the current traceback. When an exception handler is
+        entered, the stack trace is made available to the
+        program. (See section The try statement.) It is accessible as
+        the third item of the tuple returned by sys.exc_info(). When
+        the program contains no suitable handler, the stack trace is
+        written (nicely formatted) to the standard error stream; if
+        the interpreter is interactive, it is also made available to
+        the user as sys.last_traceback.
+
+        Special read-only attributes: tb_next is the next level in the
+        stack trace (towards the frame where the exception occurred),
+        or None if there is no next level; tb_frame points to the
+        execution frame of the current level; tb_lineno gives the line
+        number where the exception occurred; tb_lasti indicates the
+        precise instruction. The line number and last instruction in
+        the traceback may differ from the line number of its frame
+        object if the exception occurred in a try statement with no
+        matching except clause or with a finally clause.

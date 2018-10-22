@@ -1,0 +1,225 @@
+doctype html
+html
+  head
+    meta(charset='utf-8')
+    link(rel='stylesheet' type='text/css' href='css/reveal.css')
+    link(rel='stylesheet' type='text/css' href='css/theme/serif.css' id='theme')
+    link(rel='stylesheet' type='text/css' href='lib/css/github-gist.min.css')
+    link(rel='stylesheet' type='text/css' href='css/customize.css')
+    title GraphQL & Relay
+    script.
+      var link = document.createElement( 'link' );
+      link.rel = 'stylesheet';
+      link.type = 'text/css';
+      link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+      document.getElementsByTagName( 'head' )[0].appendChild( link );
+    <!--[if lt IE 9]>
+    script(src='lib/js/html5shiv.js')
+    <![endif]-->
+  body
+    .reveal
+      .slides
+        section
+          img(src='pic/logo.svg').logo
+          h2 GraphQL & Relay
+          h3 Artem Malyshev
+          h4 @proofit404
+        section(data-background='pic/todolist.png' data-background-size='contain')
+          br
+        section(data-background-color='#FFFFFF')
+          h4 What's wrong with REST?
+          img(src='pic/server-roundtrips.png')
+          aside.notes
+            p Hyperlinks
+            p To many round trips
+        section
+          h4 Expand relations
+          pre
+            code.json.
+              {
+                  "title": "Finish monthly growth report",
+                  "category": "Growth Team",
+                  "tasks": [
+                      {"order": 1, "title": "Review samples"},
+                      {"order": 2, "title": "Summarize"},
+                      {"order": 3, "title": "Send to customer"},
+                      ...
+                  ],
+              }
+          aside.notes
+            p DRF nested serializers as fields
+            p Overfetching
+        section
+          h4 Custom endpoints
+          pre
+            code.
+              /todos_with_everything_i_need
+
+              /todos_with_everything_i_need_with_author_v2
+
+              /todos_with_everything_i_need_for_samsung_smart_tv
+
+              /tightly_coupled_endpoint_for_a_specific_client
+          aside.notes
+            p Unpleasant to work API
+        section(data-background='pic/man-data-analytics.jpg' data-background-size='contain' data-background-color='#6F7170')
+          br
+          aside.notes
+            p We do not think in
+            p endpoints or join tables
+        section
+          img(src='pic/logo.svg').logo
+          h3 GraphQL
+        section(data-background-color='#FFFFFF')
+          img(src='pic/lee-byron.jpg').face-corner
+          br
+          a(href='http://leebyron.com/') @leebyron
+        section
+          h4 Hello world
+          pre
+            code.
+              {
+                me {
+                  name
+                }
+              }
+        section
+          h4 Hello world
+          pre
+            code.json.
+                         {
+              {            "data": {
+                me {          "me": {
+                  name           "name": "Artem"
+                }             }
+              }            }
+                         }
+        section
+          h4 Schema
+          pre
+            code.graphql.
+              type Task {
+                id: ID!
+                title: String!
+                description: String!
+                createdBy: Employee!
+                assignedTo: Employee!
+                statusHistory: [Status]
+                comments: [Comment]
+              }
+        section
+          img(src='pic/magic-cat.png')
+        section(data-background-color='#3B3738')
+          img(src='pic/relay.svg').logo.relay-bg
+          h3.relay-text Relay
+        section(data-background='pic/marked-todolist.png' data-background-size='contain')
+          br
+        section
+          h4 Relay
+          pre
+            code.jsx.small.
+              class Task extends React.Component {
+                render() {
+                  return #{"<"}li key={title}#{">"}
+                           #{"<"}b#{">"}{title}#{"<"}/b#{">"} {description}
+                         #{"<"}/li#{">"}
+                }
+              }
+              Task = Relay.createContainer(Task, {
+                task: () =#{">"} Relay.QL`
+                  fragment on Task {
+                    title,
+                    description,
+                  }
+                `,
+              });
+        section
+          h4 Nesting
+          pre
+            code.jsx.small.
+              class TaskList extends React.Component {
+                render() {
+                  return #{"<"}ul#{">"} {this.props.tasks.map(
+                    task => #{"<"}Task name={name} /#{">"}
+                  )} #{"<"}/ul#{">"};
+                }
+              }
+          pre
+            code.jsx.small.
+              TaskList = Relay.createContainer(TaskList, {
+                tasks: () =#{">"} Relay.QL`
+                  tasks {
+                    #[mark(style='font-weight: bold;') ${Task.getFragment('task')}]
+                  }`,
+              });
+        section
+          h4 Conditional fetching
+          pre
+            code.jsx.
+              Relay.createContainer(Task, {
+                initialVariables: { showComments: false },
+                task: () =#{">"} Relay.QL`
+                  fragment on Task {
+                    title,
+                    description,
+                    comments #[mark(style='font-weight: bold;') @include(if: $showComments)] {
+                      author
+                      text
+                    }
+                  }
+                `});
+        section
+          h4 Cache
+          pre
+            code.graphql.
+                               {
+              query {            "data": {
+                employees {        "employees": [
+                  id                 { "id": "Y3JlYXRlZF9hd" }
+                }                  ],
+                tasks {            "tasks": [
+                  id                 { "id": "C0tLTIwMTYtMD" }
+                }                  ]
+              }                  }
+                               }
+        section
+          h4 And more
+          ul
+            li Pagination
+            li Optimistic updates
+            li Deferred
+            li Subscriptions
+        section
+          img(src='pic/apollo.png')
+        section
+          h4 Backend
+          img(src='pic/bill-lumbergh.jpg')
+        section
+          h3 Summarize
+          h4 Pros
+          ul
+            li No extra roundtrips
+            li No overfetching
+            li Frontend goodies
+          h4 Cons
+          ul
+            li Backend nightmare
+        section
+          h2 Questions?
+    script(src='lib/js/head.min.js')
+    script(src='js/reveal.js')
+    script(src='lib/js/highlight.min.js')
+    script.
+      hljs.initHighlightingOnLoad();
+    script.
+      Reveal.initialize({
+          controls: false,
+          progress: false,
+          slideNumber: true,
+          history: true,
+          transition: 'none',
+          dependencies: [
+              { src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+              { src: 'plugin/notes/notes.js', async: true }
+          ]
+      });
